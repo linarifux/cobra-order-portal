@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* You can define custom variables for the DSM brand here if needed */
+@theme {
+  --color-dsm-brand: #0055ff;
+}
+
+button {
+  cursor: pointer;
+}

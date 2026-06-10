@@ -1,55 +1,72 @@
-import { useState, useMemo } from 'react';
-import { useDispatch } from 'react-redux';
+import { useState, useMemo, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { addToCart } from '../store/slices/cartSlice';
-import { Search, Plus, ShoppingCart, ChevronRight, Layers } from 'lucide-react';
-
-// --- Mock Data ---
-const INVENTORY_CATEGORIES = [
-  { division: 'Corporate', sub: ['Corporate', 'PPE'] },
-  { division: 'CT', sub: ['Isovue', 'Protocol Touch'] },
-  { division: 'CTC', sub: ['Sales Aids', 'Support Material'] },
-  { division: 'Devices', sub: ['CT', 'MR', 'Support Material'] },
-  { division: 'Misc Materials', sub: ['Corporate'] },
-  { division: 'MRI', sub: ['MultiHance', 'ProHance', 'Support Material', 'Vueway'] },
-  { division: 'Nuclear Med', sub: ['Cardiogen', 'Education', 'Heartsee', 'Kinevac', 'Reprints', 'Sales Aids'] },
-  { division: 'Ultrasound', sub: ['Clinical', 'Sales Aids', 'Support Material'] },
-  { division: 'Varibar', sub: ['Clinical Studies', 'Sales Aids'] },
-];
-
-const MOCK_PRODUCTS = [
-  { id: '04-3022-205C', desc: 'ProHance Sticker Post Contrast 0.1', min: 0, max: 10, available: 36, onOrder: 0, category: 'Corporate' },
-  { id: '05-032905', desc: 'MultiHance Film Stickers -0.1 Post Contrast', min: 0, max: 5, available: 473, onOrder: 0, category: 'MultiHance' },
-  { id: '06-030706A', desc: 'Isovue 200 Labels', min: 0, max: 5, available: 1561, onOrder: 0, category: 'Isovue' },
-  { id: '06-030706B', desc: 'Isovue 250 Labels', min: 0, max: 5, available: 183, onOrder: 0, category: 'Isovue' },
-  { id: '06-030706C', desc: 'Isovue 300 Labels', min: 0, max: 5, available: 214, onOrder: 0, category: 'Isovue' },
-  { id: '06-072406', desc: 'Bracco Napkins (each pack qty 50)', min: 0, max: 2, available: 61, onOrder: 0, category: 'Misc Materials' },
-  { id: '08-050108', desc: 'MultiHance JACHO Stickers', min: 1, max: 5, available: 325, onOrder: 0, category: 'MultiHance' },
-  { id: '10-042710', desc: 'Student Award Plaques', min: 0, max: 3, available: 153, onOrder: 0, category: 'Education' },
-  { id: '11-062711', desc: 'Senthamizhchelvan (2010) - Human Biodistribution', min: 1, max: 25, available: 1811, onOrder: 0, category: 'Clinical Studies' },
-  { id: '12-050412RPI', desc: 'Schleipman (2006) - Occupational Radiation Dose', min: 0, max: 5, available: 504, onOrder: 0, category: 'Clinical Studies' },
-];
+import { fetchInventory } from '../store/slices/inventorySlice';
+import { Search, Plus, ShoppingCart, ChevronRight, Layers, Loader2, AlertCircle } from 'lucide-react';
 
 export default function Products() {
+  const dispatch = useDispatch();
+  
+  // Redux State
+  const { items, status, error } = useSelector((state) => state.inventory);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [quantities, setQuantities] = useState({});
-  
-  const dispatch = useDispatch();
 
-  // Filter logic
+  // Fetch Inventory on mount (Using the DSM Customer ID)
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchInventory('6a266dc144c2698dcc55390c'));
+    }
+  }, [status, dispatch]);
+
+  // Dynamically derive sidebar categories from the API payload
+  const dynamicCategories = useMemo(() => {
+    const categoryMap = {};
+    
+    items.forEach(item => {
+      const divisionName = item.divisions?.[0]?.divisionName || 'Uncategorized';
+      const catName = item.categories?.[0]?.categoryName || 'General';
+      
+      if (!categoryMap[divisionName]) {
+        categoryMap[divisionName] = new Set();
+      }
+      categoryMap[divisionName].add(catName);
+    });
+
+    return Object.entries(categoryMap).map(([division, subCats]) => ({
+      division,
+      sub: Array.from(subCats).sort()
+    })).sort((a, b) => a.division.localeCompare(b.division));
+  }, [items]);
+
+  // Map the raw MongoDB items to our UI structure
   const filteredProducts = useMemo(() => {
-    return MOCK_PRODUCTS.filter(product => {
+    const mapped = items.map(item => ({
+      _id: item._id,
+      id: item.sku || 'N/A', // Using SKU as the display ID
+      desc: item.itemName || 'Unknown Item',
+      min: item.safetyBuffer || 0,
+      max: '-', // Not provided in API, using placeholder
+      available: item.unitsOnHand || 0,
+      onOrder: item.pipelineSupply || 0,
+      category: item.categories?.[0]?.categoryName || 'General',
+      division: item.divisions?.[0]?.divisionName || 'Uncategorized',
+      unitCost: item.unitCost
+    }));
+
+    return mapped.filter(product => {
       const matchesSearch = 
         product.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
         product.id.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, activeCategory]);
+  }, [items, searchQuery, activeCategory]);
 
   const handleQuantityChange = (id, value) => {
-    // Only allow numbers
     if (value === '' || /^[0-9\b]+$/.test(value)) {
       setQuantities(prev => ({ ...prev, [id]: value }));
     }
@@ -58,14 +75,40 @@ export default function Products() {
   const handleAdd = (product) => {
     const qty = parseInt(quantities[product.id] || 0, 10);
     if (qty > 0) {
-      
-      // Dispatch the item and quantity to the Redux store
       dispatch(addToCart({ product, quantity: qty }));
-      
-      // Reset input after adding
       setQuantities(prev => ({ ...prev, [product.id]: '' }));
     }
   };
+
+  // --- Render States ---
+  if (status === 'loading') {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
+          <Loader2 className="h-10 w-10 animate-spin" />
+          <p className="font-medium text-gray-600">Loading DSM Inventory...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in">
+          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
+          <p className="text-gray-500 mt-2">{error}</p>
+          <button 
+            onClick={() => dispatch(fetchInventory('6a266dc144c2698dcc55390c'))}
+            className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-10rem)] animate-in fade-in duration-500">
@@ -85,7 +128,7 @@ export default function Products() {
         </div>
         
         <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
-          {INVENTORY_CATEGORIES.map((cat) => (
+          {dynamicCategories.map((cat) => (
             <div key={cat.division} className="mb-4">
               <h3 className="px-3 text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
                 {cat.division}
@@ -130,7 +173,7 @@ export default function Products() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search by code or description..."
+              placeholder="Search by SKU or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-10 pr-4 rounded-xl border border-gray-300 bg-gray-50 text-sm outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
@@ -143,7 +186,7 @@ export default function Products() {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead className="sticky top-0 bg-gray-50/95 backdrop-blur-sm z-10 shadow-sm shadow-gray-200/50">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Product Code</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">SKU</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Description</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Min / Max</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Available</th>

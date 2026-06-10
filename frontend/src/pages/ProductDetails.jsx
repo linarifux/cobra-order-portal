@@ -1,44 +1,53 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../store/slices/cartSlice';
 import { 
   ArrowLeft, Package, ShoppingCart, Activity, 
-  AlertCircle, CheckCircle2, FileText, Layers
+  AlertCircle, CheckCircle2, Layers, MapPin, DollarSign, ActivitySquare
 } from 'lucide-react';
 
-// Temporary mock data (In a real app, you would fetch this via Redux/API using the ID)
-const MOCK_PRODUCTS = [
-  { id: '04-3022-205C', desc: 'ProHance Sticker Post Contrast 0.1', min: 0, max: 10, available: 36, onOrder: 0, category: 'Corporate' },
-  { id: '05-032905', desc: 'MultiHance Film Stickers -0.1 Post Contrast', min: 0, max: 5, available: 473, onOrder: 0, category: 'MultiHance' },
-  { id: '06-030706A', desc: 'Isovue 200 Labels', min: 0, max: 5, available: 1561, onOrder: 0, category: 'Isovue' },
-  { id: '06-072406', desc: 'Bracco Napkins (each pack qty 50)', min: 0, max: 2, available: 61, onOrder: 0, category: 'Misc Materials' },
-  { id: '11-062711', desc: 'Senthamizhchelvan (2010) - Human Biodistribution', min: 1, max: 25, available: 1811, onOrder: 0, category: 'Clinical Studies' },
-];
-
 export default function ProductDetails() {
-  const { id } = useParams();
+  const { id } = useParams(); // URL Param contains the SKU
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  
+  // Read from the Redux store populated by the API
+  const { items } = useSelector((state) => state.inventory);
   
   const [quantity, setQuantity] = useState('1');
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Find the product by ID from the URL
-  const product = MOCK_PRODUCTS.find(p => p.id === id);
+  // Find the exact item from the raw API payload using the SKU
+  const rawProduct = items.find(p => p.sku === id);
 
-  if (!product) {
+  if (!rawProduct) {
     return (
       <div className="flex flex-col items-center justify-center py-24 animate-in fade-in">
         <AlertCircle className="h-12 w-12 text-gray-400 mb-4" />
         <h2 className="text-xl font-bold text-gray-900">Product Not Found</h2>
-        <p className="text-gray-500 mt-2">The product code {id} does not exist in the catalog.</p>
+        <p className="text-gray-500 mt-2">The SKU {id} does not exist in the catalog or hasn't loaded.</p>
         <Link to="/products" className="mt-6 text-blue-600 hover:underline font-medium">
           Return to Products
         </Link>
       </div>
     );
   }
+
+  // Format the raw data into standard properties for the UI
+  const product = {
+    id: rawProduct.sku,
+    desc: rawProduct.itemName,
+    available: rawProduct.unitsOnHand || 0,
+    min: rawProduct.safetyBuffer || 0,
+    max: '-', // API omission
+    onOrder: rawProduct.pipelineSupply || 0,
+    category: rawProduct.categories?.[0]?.categoryName || 'General',
+    location: rawProduct.locationCoordinates || 'Unassigned',
+    cost: rawProduct.unitCost || 0,
+    valuation: rawProduct.totalValuation || 0,
+    status: rawProduct.status || 'Unknown'
+  };
 
   const handleQuantityChange = (e) => {
     const val = e.target.value;
@@ -77,8 +86,8 @@ export default function ProductDetails() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         
-        {/* Left Column: Image/Visual Placeholder */}
-        <div className="lg:col-span-1">
+        {/* Left Column: Stats & Meta info */}
+        <div className="lg:col-span-1 flex flex-col gap-4">
           <div className="aspect-square bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col items-center justify-center p-8 relative overflow-hidden group">
             <div className="absolute top-4 left-4">
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 ring-1 ring-inset ring-blue-600/20">
@@ -87,6 +96,22 @@ export default function ProductDetails() {
             </div>
             <Package className="h-32 w-32 text-gray-200 group-hover:scale-110 transition-transform duration-500" />
             <p className="mt-4 text-sm font-medium text-gray-400">No Image Available</p>
+          </div>
+
+          {/* Secondary Details Panel */}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+            <div className="flex justify-between items-center text-sm">
+              <span className="flex items-center gap-2 text-gray-500"><MapPin className="h-4 w-4"/> Location</span>
+              <span className="font-mono font-medium text-gray-900">{product.location}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="flex items-center gap-2 text-gray-500"><DollarSign className="h-4 w-4"/> Unit Cost</span>
+              <span className="font-medium text-gray-900">${product.cost}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="flex items-center gap-2 text-gray-500"><ActivitySquare className="h-4 w-4"/> Pool Status</span>
+              <span className="font-medium text-gray-900 truncate ml-2">{product.status}</span>
+            </div>
           </div>
         </div>
 
@@ -103,8 +128,8 @@ export default function ProductDetails() {
                 <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
                   SKU: {product.id}
                 </span>
-                <span className="flex items-center gap-1.5 text-emerald-600 font-medium bg-emerald-50 px-2.5 py-1 rounded-md">
-                  <CheckCircle2 className="h-4 w-4" /> In Stock
+                <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md font-medium ${product.available > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                  {product.available > 0 ? <><CheckCircle2 className="h-4 w-4" /> In Stock</> : <><AlertCircle className="h-4 w-4" /> Out of Stock</>}
                 </span>
               </div>
             </div>
@@ -131,6 +156,13 @@ export default function ProductDetails() {
                   <span className="text-xs font-medium uppercase">On Order</span>
                 </div>
                 <p className="text-2xl font-bold text-gray-900">{product.onOrder}</p>
+              </div>
+              <div className="p-4 rounded-xl bg-blue-50 border border-blue-100">
+                <div className="flex items-center gap-2 text-blue-600 mb-1">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase">Total Value</span>
+                </div>
+                <p className="text-2xl font-bold text-blue-900">${product.valuation}</p>
               </div>
             </div>
 

@@ -1,76 +1,73 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { 
   MapPin, Plus, Search, Edit2, Trash2, 
-  Building2, Phone, Mail, X, Map 
+  Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check
 } from 'lucide-react';
 
-// --- Mock Data ---
-const INITIAL_ADDRESSES = [
-  {
-    id: 'adr_1',
-    name: 'Alex Johnson',
-    company: 'TechFlow Diagnostics',
-    street: '1240 Innovation Way, Suite 200',
-    city: 'Boston',
-    state: 'MA',
-    zip: '02110',
-    phone: '(617) 555-0198',
-    email: 'alex.j@techflow.com'
-  },
-  {
-    id: 'adr_2',
-    name: 'Sarah Smith',
-    company: 'Radiant Imaging Centers',
-    street: '8900 Medical Center Dr',
-    city: 'Houston',
-    state: 'TX',
-    zip: '77030',
-    phone: '(713) 555-4432',
-    email: 'ssmith@radiantimaging.org'
-  },
-  {
-    id: 'adr_3',
-    name: 'Michael Chen',
-    company: 'Pacific Health Logistics',
-    street: '400 Broad Street',
-    city: 'Seattle',
-    state: 'WA',
-    zip: '98109',
-    phone: '(206) 555-7761',
-    email: 'mchen@pacifichealth.net'
-  }
-];
+import { 
+  fetchAddressesByCustomer, 
+  createAddress, 
+  updateAddress, 
+  deleteAddress 
+} from '../store/slices/addressSlice'; 
 
+// Strictly matching the updated Schema
 const EMPTY_FORM = {
-  name: '', company: '', street: '', city: '', state: '', zip: '', phone: '', email: ''
+  firstName: '', 
+  lastName: '',
+  contactPhone: '', 
+  contactEmail: '', 
+  street1: '', 
+  street2: '', 
+  city: '', 
+  state: '', 
+  zipCode: '', 
+  country: 'USA',
+  addressType: 'Shipping',
+  isDefault: false
 };
 
+const CUSTOMER_ID = '6a266dc144c2698dcc55390c';
+
 export default function Address() {
-  const [addresses, setAddresses] = useState(INITIAL_ADDRESSES);
+  const dispatch = useDispatch();
+  
+  const { items: addresses, status, error } = useSelector((state) => state.addresses);
+  
   const [searchQuery, setSearchQuery] = useState('');
   
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filter Logic
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchAddressesByCustomer(CUSTOMER_ID));
+    }
+  }, [status, dispatch]);
+
   const filteredAddresses = useMemo(() => {
+    if (!addresses) return [];
     return addresses.filter(addr => {
       const query = searchQuery.toLowerCase();
+      const fullName = `${addr.firstName || ''} ${addr.lastName || ''}`.toLowerCase();
       return (
-        addr.name.toLowerCase().includes(query) ||
-        addr.company.toLowerCase().includes(query) ||
-        addr.city.toLowerCase().includes(query)
+        fullName.includes(query) ||
+        (addr.city || '').toLowerCase().includes(query) ||
+        (addr.addressType || '').toLowerCase().includes(query)
       );
     });
   }, [addresses, searchQuery]);
 
-  // Form Handlers
   const openModal = (address = null) => {
     if (address) {
-      setFormData(address);
-      setEditingId(address.id);
+      setFormData({
+        ...EMPTY_FORM,
+        ...address // Spread to ensure all keys exist even if missing from db
+      });
+      setEditingId(address._id);
     } else {
       setFormData(EMPTY_FORM);
       setEditingId(null);
@@ -82,31 +79,79 @@ export default function Address() {
     setIsModalOpen(false);
     setFormData(EMPTY_FORM);
     setEditingId(null);
+    setIsSubmitting(false);
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    // Handle checkbox for isDefault separately
+    setFormData(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (editingId) {
-      // Update existing
-      setAddresses(prev => prev.map(addr => addr.id === editingId ? { ...formData, id: editingId } : addr));
-    } else {
-      // Create new
-      const newAddress = { ...formData, id: `adr_${Date.now()}` };
-      setAddresses(prev => [newAddress, ...prev]);
+    setIsSubmitting(true);
+
+    const payload = {
+      ...formData,
+      customer: CUSTOMER_ID
+    };
+
+    try {
+      if (editingId) {
+        await dispatch(updateAddress({ id: editingId, addressData: payload })).unwrap();
+      } else {
+        await dispatch(createAddress(payload)).unwrap();
+      }
+      closeModal();
+    } catch (err) {
+      console.error('Failed to save address:', err);
+      setIsSubmitting(false);
     }
-    closeModal();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this address?')) {
-      setAddresses(prev => prev.filter(addr => addr.id !== id));
+      try {
+        await dispatch(deleteAddress(id)).unwrap();
+      } catch (err) {
+        console.error('Failed to delete address:', err);
+      }
     }
   };
+
+  // --- Render States ---
+  if (status === 'loading' && addresses.length === 0) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
+          <Loader2 className="h-10 w-10 animate-spin" />
+          <p className="font-medium text-gray-600">Loading Address Book...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'failed') {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
+        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in">
+          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-gray-900">Failed to load addresses</h2>
+          <p className="text-gray-500 mt-2">{error}</p>
+          <button 
+            onClick={() => dispatch(fetchAddressesByCustomer(CUSTOMER_ID))}
+            className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 relative">
@@ -123,7 +168,7 @@ export default function Address() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
-              placeholder="Search customers or cities..."
+              placeholder="Search by name, city, or type..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-10 pr-4 rounded-xl border border-gray-300 bg-white text-sm outline-none transition-all focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm"
@@ -143,24 +188,31 @@ export default function Address() {
       {filteredAddresses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
           {filteredAddresses.map((addr) => (
-            <div key={addr.id} className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
+            <div key={addr._id} className="flex flex-col rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow overflow-hidden group">
               {/* Card Header */}
-              <div className="flex items-start justify-between p-5 border-b border-gray-100 bg-gray-50/50">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold">
-                    {addr.name.charAt(0)}
+              <div className="flex items-start justify-between p-5 border-b border-gray-100 bg-gray-50/50 relative">
+                
+                {/* Default Badge */}
+                {addr.isDefault && (
+                  <div className="absolute top-0 right-0 rounded-bl-xl rounded-tr-2xl bg-amber-100 px-3 py-1 text-[10px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1">
+                    <Star className="h-3 w-3" fill="currentColor" /> Default
+                  </div>
+                )}
+
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold uppercase">
+                    {addr.firstName ? addr.firstName.charAt(0) : '?'}
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-gray-900">{addr.name}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">{addr.firstName} {addr.lastName}</h3>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-0.5">
-                      <Building2 className="h-3.5 w-3.5" />
-                      <span>{addr.company}</span>
+                      <Tag className="h-3.5 w-3.5" />
+                      <span>{addr.addressType}</span>
                     </div>
                   </div>
                 </div>
                 
-                {/* Actions (Visible on hover for desktop) */}
-                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-1">
                   <button 
                     onClick={() => openModal(addr)}
                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -169,7 +221,7 @@ export default function Address() {
                     <Edit2 className="h-4 w-4" />
                   </button>
                   <button 
-                    onClick={() => handleDelete(addr.id)}
+                    onClick={() => handleDelete(addr._id)}
                     className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
                     title="Delete Address"
                   >
@@ -183,18 +235,27 @@ export default function Address() {
                 <div className="flex items-start gap-3 text-sm text-gray-600">
                   <MapPin className="h-4 w-4 text-gray-400 mt-0.5 flex-shrink-0" />
                   <span>
-                    {addr.street}<br />
-                    {addr.city}, {addr.state} {addr.zip}
+                    {addr.street1}
+                    {addr.street2 && <><br />{addr.street2}</>}
+                    <br />
+                    {addr.city}, {addr.state} {addr.zipCode}
+                    <br />
+                    <span className="text-gray-400">{addr.country}</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span>{addr.phone}</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                  <span className="truncate">{addr.email}</span>
-                </div>
+                {addr.contactPhone && (
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <Phone className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span>{addr.contactPhone}</span>
+                  </div>
+                )}
+                {/* Displaying the Email on the Card */}
+                {addr.contactEmail && (
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <Mail className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                    <span className="truncate" title={addr.contactEmail}>{addr.contactEmail}</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -221,7 +282,7 @@ export default function Address() {
             
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <h2 className="text-lg font-semibold text-gray-900">
-                {editingId ? 'Edit Customer Address' : 'Add New Customer'}
+                {editingId ? 'Edit Customer Address' : 'Add New Address'}
               </h2>
               <button 
                 onClick={closeModal}
@@ -236,74 +297,124 @@ export default function Address() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Contact Name</label>
-                    <input required type="text" name="name" value={formData.name} onChange={handleInputChange}
+                    <label className="block text-xs font-medium text-gray-700 mb-1">First Name <span className="text-red-500">*</span></label>
+                    <input required type="text" name="firstName" value={formData.firstName || ''} onChange={handleInputChange}
                       className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="Alex Johnson" />
+                      placeholder="Alex" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Company</label>
-                    <input required type="text" name="company" value={formData.company} onChange={handleInputChange}
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Last Name <span className="text-red-500">*</span></label>
+                    <input required type="text" name="lastName" value={formData.lastName || ''} onChange={handleInputChange}
                       className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="TechFlow Diagnostics" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Street Address</label>
-                  <input required type="text" name="street" value={formData.street} onChange={handleInputChange}
-                    className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                    placeholder="1240 Innovation Way, Suite 200" />
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="col-span-3 sm:col-span-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
-                    <input required type="text" name="city" value={formData.city} onChange={handleInputChange}
-                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="Boston" />
-                  </div>
-                  <div className="col-span-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">State</label>
-                    <input required type="text" name="state" value={formData.state} onChange={handleInputChange}
-                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="MA" />
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">ZIP Code</label>
-                    <input required type="text" name="zip" value={formData.zip} onChange={handleInputChange}
-                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="02110" />
+                      placeholder="Johnson" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                    <input required type="tel" name="phone" value={formData.phone} onChange={handleInputChange}
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Contact Phone</label>
+                    <input type="tel" name="contactPhone" value={formData.contactPhone || ''} onChange={handleInputChange}
                       className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
                       placeholder="(555) 555-5555" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                    <input required type="email" name="email" value={formData.email} onChange={handleInputChange}
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Contact Email</label>
+                    <input type="email" name="contactEmail" value={formData.contactEmail || ''} onChange={handleInputChange}
                       className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
-                      placeholder="contact@company.com" />
+                      placeholder="alex@example.com" />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Street 1 <span className="text-red-500">*</span></label>
+                    <input required type="text" name="street1" value={formData.street1 || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="1240 Innovation Way" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Street 2 (Apt, Suite, etc.)</label>
+                    <input type="text" name="street2" value={formData.street2 || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="Suite 200" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="col-span-3 sm:col-span-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">City <span className="text-red-500">*</span></label>
+                    <input required type="text" name="city" value={formData.city || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="Boston" />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">State <span className="text-red-500">*</span></label>
+                    <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="MA" />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">ZIP Code <span className="text-red-500">*</span></label>
+                    <input required type="text" name="zipCode" value={formData.zipCode || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="02110" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 pt-4 mt-2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Country</label>
+                    <input type="text" name="country" value={formData.country || ''} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20" 
+                      placeholder="USA" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Address Type</label>
+                    <select name="addressType" value={formData.addressType} onChange={handleInputChange}
+                      className="w-full h-10 px-3 rounded-lg border border-gray-300 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 bg-white"
+                    >
+                      <option value="Shipping">Shipping</option>
+                      <option value="Billing">Billing</option>
+                      <option value="Both">Both</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <div className={`flex h-5 w-5 items-center justify-center rounded border transition-colors ${formData.isDefault ? 'bg-blue-600 border-blue-600' : 'border-gray-300 group-hover:border-blue-500'}`}>
+                      <input 
+                        type="checkbox" 
+                        name="isDefault" 
+                        checked={formData.isDefault} 
+                        onChange={handleInputChange}
+                        className="sr-only"
+                      />
+                      {formData.isDefault && <Check className="h-3.5 w-3.5 text-white" />}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 select-none">Set as Default Address</span>
+                  </label>
+                  <p className="text-xs text-gray-500 mt-1 ml-8">This will remove the default status from other addresses.</p>
                 </div>
 
               </div>
 
               <div className="mt-8 flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
-                <button type="button" onClick={closeModal}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                <button 
+                  type="button" 
+                  onClick={closeModal}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
-                <button type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors"
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  {editingId ? 'Save Changes' : 'Add Customer'}
+                  {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {editingId ? 'Save Changes' : 'Add Address'}
                 </button>
               </div>
             </form>

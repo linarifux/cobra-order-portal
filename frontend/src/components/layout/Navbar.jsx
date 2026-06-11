@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { clearCart, removeFromCart } from '../../store/slices/cartSlice';
+import { removeFromCart } from '../../store/slices/cartSlice';
 import { 
   Box, Home, Package, ClipboardList, MapPin, 
-  Search, UserCircle, LogOut, Menu, X, Settings, Bell, ShoppingCart, Trash2
+  Search, UserCircle, LogOut, Menu, X, Settings, ShoppingCart, Trash2, ArrowRight
 } from 'lucide-react';
 
 export default function Navbar() {
@@ -22,13 +22,11 @@ export default function Navbar() {
   const cartItems = useSelector(state => state.cart.items);
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  // Close menus on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsCartOpen(false);
   }, [location.pathname]);
 
-  // Handle click outside for dropdowns
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -42,15 +40,9 @@ export default function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handlePlaceOrder = () => {
-    if (cartItems.length === 0) return;
-    
-    // In a real app, dispatch an API call to COBRA here
-    console.log("Order Placed:", cartItems);
-    
-    dispatch(clearCart());
+  const handleGoToCheckout = () => {
     setIsCartOpen(false);
-    navigate('/orders'); // Redirect to orders page to see the new entry
+    navigate('/checkout'); 
   };
 
   const navLinks = [
@@ -69,7 +61,6 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* Left: Brand & Desktop Links */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2.5 font-bold text-xl text-blue-600">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm">
@@ -88,7 +79,6 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Right: Actions */}
         <div className="flex items-center gap-3 sm:gap-5 relative">
           
           {/* Cart Toggle */}
@@ -128,7 +118,12 @@ export default function Navbar() {
                           <div className="flex flex-col min-w-0">
                             <span className="text-sm font-medium text-gray-900 truncate">{item.product.id}</span>
                             <span className="text-xs text-gray-500 truncate">{item.product.desc}</span>
-                            <span className="text-xs font-semibold text-blue-600 mt-0.5">Qty: {item.quantity}</span>
+                            <span className="text-xs font-semibold text-blue-600 mt-0.5">
+                              Qty: {item.quantity} 
+                              <span className="text-gray-400 font-normal ml-1">
+                                (${(item.product.unitCost || 0).toFixed(2)}/ea)
+                              </span>
+                            </span>
                           </div>
                           <button 
                             onClick={() => dispatch(removeFromCart(item.product.id))}
@@ -145,11 +140,10 @@ export default function Navbar() {
                 {cartItems.length > 0 && (
                   <div className="border-t border-gray-100 p-4 bg-gray-50/50 rounded-b-2xl">
                     <button 
-                      onClick={handlePlaceOrder}
+                      onClick={handleGoToCheckout}
                       className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-all active:scale-[0.98]"
                     >
-                      <ClipboardList className="h-4 w-4" />
-                      Place Order
+                      Proceed to Checkout <ArrowRight className="h-4 w-4" />
                     </button>
                   </div>
                 )}
@@ -183,6 +177,13 @@ export default function Navbar() {
             )}
           </div>
 
+          {/* Mobile Menu Toggle */}
+          <button 
+            className="md:hidden rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
       </div>
     </nav>

@@ -12,3 +12,16 @@ export const store = configureStore({
     addresses: addressReducer,
   },
 });
+
+// Watch the Redux store for ANY changes
+store.subscribe(() => {
+  try {
+    // Extract just the cart items from the global state
+    const currentCartItems = store.getState().cart.items;
+    
+    // Save the exact array back to the browser
+    localStorage.setItem('dsm_cart_items', JSON.stringify(currentCartItems));
+  } catch (error) {
+    console.warn("Failed to save cart to storage", error);
+  }
+});

@@ -1,9 +1,21 @@
 import { createSlice } from '@reduxjs/toolkit';
 
+// Helper function to safely read from localStorage
+const loadCartFromStorage = () => {
+  try {
+    const savedCart = localStorage.getItem('dsm_cart_items');
+    return savedCart ? JSON.parse(savedCart) : [];
+  } catch (error) {
+    console.warn("Failed to load cart from storage", error);
+    return [];
+  }
+};
+
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    items: [],
+    // Inject the saved data here instead of starting with an empty []
+    items: loadCartFromStorage(), 
   },
   reducers: {
     addToCart: (state, action) => {

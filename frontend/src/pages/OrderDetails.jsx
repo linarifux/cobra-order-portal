@@ -35,12 +35,12 @@ export default function OrderDetails() {
   const getStatusBadge = (status) => {
     switch(status) {
       case 'Delivered':
-      case 'Shipped': return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
+      case 'Shipped': return 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50 shadow-sm';
       case 'Processing':
-      case 'Ready to Ship': return 'bg-blue-50 text-blue-700 ring-blue-600/20';
-      case 'Cancelled': return 'bg-red-50 text-red-700 ring-red-600/20';
-      case 'On Hold': return 'bg-gray-50 text-gray-700 ring-gray-600/20';
-      default: return 'bg-amber-50 text-amber-700 ring-amber-600/20';
+      case 'Ready to Ship': return 'bg-blue-50/80 text-blue-700 border-blue-200/50 shadow-sm';
+      case 'Cancelled': return 'bg-red-50/80 text-red-700 border-red-200/50 shadow-sm';
+      case 'On Hold': return 'bg-gray-50/80 text-gray-700 border-gray-200/50 shadow-sm';
+      default: return 'bg-amber-50/80 text-amber-700 border-amber-200/50 shadow-sm';
     }
   };
 
@@ -49,7 +49,7 @@ export default function OrderDetails() {
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
           <Loader2 className="h-10 w-10 animate-spin" />
-          <p className="font-medium text-gray-600">Retrieving Order Details...</p>
+          <p className="font-bold tracking-tight text-gray-600">Retrieving Order Details...</p>
         </div>
       </div>
     );
@@ -58,11 +58,14 @@ export default function OrderDetails() {
   if (detailsStatus === 'failed') {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
-        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in">
+        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-bold text-gray-900">Order Not Found</h2>
-          <p className="text-gray-500 mt-2">{error}</p>
-          <button onClick={() => navigate('/orders')} className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Order Not Found</h2>
+          <p className="text-gray-500 mt-2 font-medium">{error}</p>
+          <button 
+            onClick={() => navigate('/orders')} 
+            className="mt-8 px-6 py-2.5 bg-white/50 border border-white/80 rounded-xl shadow-sm text-blue-600 hover:bg-white hover:shadow-md transition-all font-bold"
+          >
             Back to Orders
           </button>
         </div>
@@ -74,45 +77,52 @@ export default function OrderDetails() {
   const ship = order.shippingDetails;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in fade-in duration-500">
+    <div className="relative max-w-6xl mx-auto space-y-8 animate-in fade-in duration-700">
       
-      {/* Header */}
+      {/* Subtle Background Orbs */}
+      <div className="absolute top-20 right-10 w-80 h-80 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute top-60 left-10 w-80 h-80 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+
+      {/* Premium Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-5">
           <button 
             onClick={() => navigate('/orders')}
-            className="flex items-center justify-center h-10 w-10 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-gray-50 transition-colors shadow-sm"
+            className="flex items-center justify-center h-12 w-12 rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">{order.orderNumber}</h1>
-              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${getStatusBadge(order.status)}`}>
+              <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{order.orderNumber}</h1>
+              <span className={`inline-flex items-center rounded-lg px-3 py-1 text-[11px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
                 {order.status}
               </span>
             </div>
-            <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
+            <p className="text-sm font-medium text-gray-500 mt-1.5 flex items-center gap-2">
               <Calendar className="h-4 w-4" /> Placed on {formatDate(order.createdAt)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         
         {/* Left Column: Info Cards */}
-        <div className="flex-1 space-y-6">
+        <div className="flex-1 space-y-6 lg:space-y-8">
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Shipping Address */}
-            <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="border-b border-gray-100 px-5 py-4 flex items-center gap-2.5 bg-gray-50/50">
-                <MapPin className="h-5 w-5 text-gray-500" />
-                <h2 className="text-base font-semibold text-gray-900">Shipping Address</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {/* Shipping Address Card */}
+            <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col relative group">
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr from-blue-400 to-indigo-500 opacity-5 blur-2xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30 z-10">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner">
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                </div>
+                <h2 className="text-base font-bold text-gray-900 tracking-tight">Shipping Address</h2>
               </div>
-              <div className="p-5 flex-1 text-sm text-gray-600 leading-relaxed">
-                <span className="block font-bold text-gray-900 mb-1 text-base">{addr?.recipientName}</span>
+              <div className="p-6 flex-1 text-sm text-gray-700 font-medium leading-relaxed z-10">
+                <span className="block font-extrabold text-gray-900 mb-2 text-base">{addr?.recipientName}</span>
                 {addr?.line1} <br />
                 {addr?.line2 && <>{addr.line2}<br /></>}
                 {addr?.city}, {addr?.state} {addr?.zip} <br />
@@ -120,23 +130,28 @@ export default function OrderDetails() {
               </div>
             </section>
 
-            {/* Carrier Info */}
-            <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="border-b border-gray-100 px-5 py-4 flex items-center gap-2.5 bg-gray-50/50">
-                <Truck className="h-5 w-5 text-gray-500" />
-                <h2 className="text-base font-semibold text-gray-900">Carrier Details</h2>
+            {/* Carrier Info Card */}
+            <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col relative group">
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 opacity-5 blur-2xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30 z-10">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-emerald-100 to-teal-100 border border-white shadow-inner">
+                  <Truck className="h-4 w-4 text-emerald-600" />
+                </div>
+                <h2 className="text-base font-bold text-gray-900 tracking-tight">Carrier Details</h2>
               </div>
-              <div className="p-5 flex-1 space-y-3 text-sm">
+              <div className="p-6 flex-1 space-y-4 text-sm z-10">
                 <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-0.5">Service</p>
-                  <p className="font-medium text-gray-900">
+                  <p className="text-gray-400 text-[10px] uppercase tracking-widest font-bold mb-1">Service</p>
+                  <p className="font-bold text-gray-900 bg-white/50 border border-white/80 px-3 py-2 rounded-xl shadow-sm inline-block">
                     {ship?.carrierType || 'Standard'} - {ship?.serviceCode || 'TBD'}
                   </p>
                 </div>
                 {ship?.trackingNumber && (
                   <div>
-                    <p className="text-gray-500 text-xs uppercase tracking-wider font-semibold mb-0.5">Tracking Number</p>
-                    <p className="font-mono text-blue-600 font-medium">{ship.trackingNumber}</p>
+                    <p className="text-gray-400 text-[10px] uppercase tracking-widest font-bold mb-1">Tracking Number</p>
+                    <p className="font-mono text-blue-600 font-bold bg-white/50 border border-white/80 px-3 py-2 rounded-xl shadow-sm inline-block cursor-pointer hover:bg-white hover:text-blue-700 transition-colors">
+                      {ship.trackingNumber}
+                    </p>
                   </div>
                 )}
               </div>
@@ -145,13 +160,18 @@ export default function OrderDetails() {
 
           {/* Notes Section */}
           {order.notes && (
-            <section className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="border-b border-gray-100 px-5 py-4 flex items-center gap-2.5 bg-gray-50/50">
-                <FileText className="h-5 w-5 text-gray-500" />
-                <h2 className="text-base font-semibold text-gray-900">Order Notes & Details</h2>
+            <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden relative group">
+              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 opacity-5 blur-2xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30 z-10 relative">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-100 to-orange-100 border border-white shadow-inner">
+                  <FileText className="h-4 w-4 text-amber-600" />
+                </div>
+                <h2 className="text-base font-bold text-gray-900 tracking-tight">Order Notes & Details</h2>
               </div>
-              <div className="p-5">
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{order.notes}</p>
+              <div className="p-6 z-10 relative">
+                <div className="bg-white/50 border border-white/80 rounded-2xl p-5 shadow-sm">
+                  <p className="text-sm font-medium text-gray-700 whitespace-pre-wrap leading-relaxed">{order.notes}</p>
+                </div>
               </div>
             </section>
           )}
@@ -160,28 +180,31 @@ export default function OrderDetails() {
 
         {/* Right Column: Line Items & Summary */}
         <div className="w-full lg:w-[420px] flex-shrink-0">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="p-6 bg-gray-900 text-white flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Receipt</h2>
-              <span className="bg-white/10 px-2.5 py-1 rounded-full text-xs font-medium backdrop-blur-sm">
+          <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+            
+            {/* Dark Premium Header for Receipt */}
+            <div className="p-6 bg-gradient-to-br from-slate-900 to-gray-900 text-white flex items-center justify-between shadow-inner relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
+              <h2 className="text-lg font-bold tracking-tight relative z-10">Receipt</h2>
+              <span className="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md relative z-10 shadow-sm">
                 {order.items?.length || 0} Items
               </span>
             </div>
             
-            <div className="max-h-[400px] overflow-y-auto p-6 space-y-4 custom-scrollbar border-b border-gray-100">
+            <div className="max-h-[400px] overflow-y-auto p-6 space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {order.items?.map((item, index) => (
-                <div key={index} className="flex gap-4">
-                  <div className="h-14 w-14 rounded-lg bg-gray-50 border border-gray-200 flex flex-shrink-0 items-center justify-center">
-                    <Package className="h-6 w-6 text-gray-300" />
+                <div key={index} className="flex gap-4 p-3 rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
+                  <div className="h-14 w-14 rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner">
+                    <Package className="h-6 w-6 text-gray-400" />
                   </div>
                   <div className="flex flex-col flex-1 justify-center min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate" title={item.name}>
+                    <h3 className="text-sm font-bold text-gray-900 truncate tracking-tight" title={item.name}>
                       {item.name}
                     </h3>
-                    <p className="text-xs text-gray-500 font-mono mt-0.5">SKU: {item.sku}</p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-0.5 rounded">Qty: {item.quantity}</span>
-                      <span className="text-sm font-medium text-gray-900">
+                    <p className="text-[10px] text-gray-500 font-mono font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
+                      <span className="text-sm font-extrabold text-blue-600">
                         {formatMoney(item.totalPrice)}
                       </span>
                     </div>
@@ -190,22 +213,24 @@ export default function OrderDetails() {
               ))}
             </div>
 
-            <div className="p-6 space-y-3 text-sm bg-gray-50/50">
-              <div className="flex justify-between text-gray-600">
+            <div className="p-6 space-y-4 text-sm bg-white/40">
+              <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
-                <span className="font-medium text-gray-900">
+                <span className="font-bold text-gray-900">
                   {formatMoney((order.totalAmount || 0) - (ship?.shippingCost || 0))}
                 </span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
-                <span className="font-medium text-gray-900">
+                <span className="font-bold text-gray-900">
                   {formatMoney(ship?.shippingCost || 0)}
                 </span>
               </div>
-              <div className="pt-3 mt-3 border-t border-gray-200 flex justify-between items-center">
-                <span className="text-base font-bold text-gray-900">Total Charged</span>
-                <span className="text-2xl font-bold text-blue-600">{formatMoney(order.totalAmount)}</span>
+              <div className="pt-4 mt-2 border-t border-gray-200/60 flex justify-between items-center">
+                <span className="text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
+                <span className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm">
+                  {formatMoney(order.totalAmount)}
+                </span>
               </div>
             </div>
             

@@ -95,13 +95,13 @@ export default function Products() {
   if (status === 'failed') {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
-        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in">
+        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
           <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
           <p className="text-gray-500 mt-2">{error}</p>
           <button 
             onClick={() => dispatch(fetchInventory('6a266dc144c2698dcc55390c'))}
-            className="mt-6 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 font-medium"
+            className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-medium transition-all"
           >
             Try Again
           </button>
@@ -111,15 +111,21 @@ export default function Products() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-[calc(100vh-10rem)] animate-in fade-in duration-500">
+    <div className="relative flex flex-col md:flex-row gap-6 h-[calc(100vh-10rem)] animate-in fade-in duration-700">
       
+      {/* Subtle Background Orbs */}
+      <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute bottom-10 right-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 flex-shrink-0 flex flex-col bg-gray-50/50 rounded-2xl border border-gray-200 overflow-hidden h-full">
-        <div className="p-4 border-b border-gray-200 bg-white">
+      <aside className="w-full md:w-64 flex-shrink-0 flex flex-col bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden h-full">
+        <div className="p-4 border-b border-white/50 bg-white/30">
           <button 
             onClick={() => setActiveCategory('All')}
-            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeCategory === 'All' ? 'bg-blue-100 text-blue-700' : 'text-gray-700 hover:bg-gray-100'
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 ${
+              activeCategory === 'All' 
+                ? 'bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-md shadow-blue-500/20' 
+                : 'text-gray-700 hover:bg-white/60 hover:shadow-sm'
             }`}
           >
             <Layers className="h-4 w-4" />
@@ -127,21 +133,21 @@ export default function Products() {
           </button>
         </div>
         
-        <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           {dynamicCategories.map((cat) => (
-            <div key={cat.division} className="mb-4">
-              <h3 className="px-3 text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
+            <div key={cat.division} className="mb-6">
+              <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
                 {cat.division}
               </h3>
-              <div className="flex flex-col space-y-0.5">
+              <div className="flex flex-col space-y-1">
                 {cat.sub.map((subCat) => (
                   <button
                     key={subCat}
                     onClick={() => setActiveCategory(subCat)}
-                    className={`text-left px-3 py-1.5 rounded-md text-sm transition-colors flex items-center justify-between group ${
+                    className={`text-left px-4 py-2 rounded-xl text-sm transition-all duration-300 flex items-center justify-between group ${
                       activeCategory === subCat 
-                        ? 'bg-blue-50 text-blue-700 font-medium' 
-                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                        ? 'bg-blue-50/80 text-blue-700 font-bold border border-blue-200/50 shadow-sm' 
+                        : 'text-gray-600 hover:bg-white/60 hover:text-gray-900 border border-transparent'
                     }`}
                   >
                     <span>{subCat}</span>
@@ -155,28 +161,30 @@ export default function Products() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 bg-white rounded-2xl border border-gray-200 shadow-sm h-full overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] h-full overflow-hidden">
         
         {/* Top Header & Search */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 lg:p-6 border-b border-gray-100 bg-white z-10">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 lg:px-8 lg:py-6 border-b border-white/50 bg-white/30 z-10">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-blue-600" />
+            <h1 className="text-2xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner">
+                <ShoppingCart className="h-5 w-5 text-blue-600" />
+              </div>
               {activeCategory === 'All' ? 'Product Catalog' : activeCategory}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm font-medium text-gray-500 mt-1 ml-14">
               Showing {filteredProducts.length} items
             </p>
           </div>
 
           <div className="relative w-full sm:w-80 group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
               placeholder="Search by SKU or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-xl border border-gray-300 bg-gray-50 text-sm outline-none transition-all focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10"
+              className="w-full h-12 pl-11 pr-4 rounded-2xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
             />
           </div>
         </div>
@@ -184,56 +192,56 @@ export default function Products() {
         {/* Product Table */}
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[800px]">
-            <thead className="sticky top-0 bg-gray-50/95 backdrop-blur-sm z-10 shadow-sm shadow-gray-200/50">
+            <thead className="sticky top-0 bg-white/60 backdrop-blur-md z-10 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">SKU</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Description</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Min / Max</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">Available</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">On Order</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200 text-right">Action</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">SKU</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Description</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Min / Max</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Available</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">On Order</th>
+                <th className="px-8 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
+            <tbody className="divide-y divide-white/40">
               {filteredProducts.length > 0 ? (
                 filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-blue-50/50 transition-colors group">
-                    <td className="px-6 py-4">
+                  <tr key={product.id} className="hover:bg-white/60 transition-colors duration-200 group">
+                    <td className="px-8 py-5">
                       <Link 
                         to={`/products/${encodeURIComponent(product.id)}`}
-                        className="text-sm font-semibold text-blue-600 underline underline-offset-2 decoration-blue-200 hover:decoration-blue-600 transition-colors"
+                        className="text-sm font-bold text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline"
                       >
                         {product.id}
                       </Link>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-900">{product.desc}</span>
+                    <td className="px-8 py-5">
+                      <span className="text-sm font-medium text-gray-900">{product.desc}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded-md">
+                    <td className="px-8 py-5">
+                      <span className="text-xs font-semibold text-gray-600 bg-white/50 border border-white/80 px-2.5 py-1.5 rounded-lg shadow-sm">
                         {product.min} / {product.max}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm font-medium text-gray-900">{product.available}</span>
+                    <td className="px-8 py-5">
+                      <span className="text-sm font-bold text-gray-900">{product.available}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className="text-sm text-gray-500">{product.onOrder}</span>
+                    <td className="px-8 py-5">
+                      <span className="text-sm font-medium text-gray-500">{product.onOrder}</span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-3 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <td className="px-8 py-5">
+                      <div className="flex items-center justify-end gap-3 opacity-90 group-hover:opacity-100 transition-opacity">
                         <input
                           type="text"
                           maxLength="4"
                           placeholder="Qty"
                           value={quantities[product.id] || ''}
                           onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                          className="w-16 h-9 px-2 text-center text-sm border border-gray-300 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                          className="w-16 h-10 px-2 text-center text-sm font-medium bg-white/50 border border-white/60 rounded-xl outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner"
                         />
                         <button 
                           onClick={() => handleAdd(product)}
                           disabled={!quantities[product.id] || quantities[product.id] === '0'}
-                          className="flex items-center justify-center h-9 w-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+                          className="flex items-center justify-center h-10 w-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all active:scale-95"
                         >
                           <Plus className="h-5 w-5" />
                         </button>
@@ -243,11 +251,13 @@ export default function Products() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan="6" className="px-8 py-16 text-center">
                     <div className="flex flex-col items-center justify-center">
-                      <Search className="h-8 w-8 text-gray-300 mb-3" />
-                      <p className="text-base font-medium text-gray-900">No products found</p>
-                      <p className="text-sm text-gray-500">Try adjusting your search or filter.</p>
+                      <div className="h-16 w-16 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
+                        <Search className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <p className="text-lg font-bold text-gray-900">No products found</p>
+                      <p className="text-sm font-medium text-gray-500 mt-1">Try adjusting your search or filter.</p>
                     </div>
                   </td>
                 </tr>

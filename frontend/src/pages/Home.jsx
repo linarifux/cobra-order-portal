@@ -1,35 +1,145 @@
-import { ArrowUpRight, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchOrders } from '../store/slices/orderSlice';
+import { ArrowUpRight, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const dispatch = useDispatch();
+  const { user } = useSelector((state) => state.auth);
+  const { items: orders, status: ordersStatus } = useSelector((state) => state.orders);
+
+  // Fetch orders when the dashboard loads
+  useEffect(() => {
+    if (ordersStatus === 'idle') {
+      dispatch(fetchOrders());
+    }
+  }, [ordersStatus, dispatch]);
+
+  // Dynamically calculate order statistics based on your backend schema statuses
+  const orderStats = useMemo(() => {
+    if (!orders) return { total: 0, pending: 0, synced: 0, errors: 0 };
+
+    return {
+      total: orders.length,
+      pending: orders.filter(o => o.status === 'Pending').length,
+      // Grouping active/completed states as "Synced to COBRA"
+      synced: orders.filter(o => ['Processing', 'Ready to Ship', 'Shipped', 'Delivered'].includes(o.status)).length,
+      // Grouping problematic states as "Errors/Action Needed"
+      errors: orders.filter(o => ['Cancelled', 'On Hold'].includes(o.status)).length,
+    };
+  }, [orders]);
+
   const stats = [
-    { name: 'Total Orders', value: '2,842', icon: ArrowUpRight, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { name: 'Pending Sync', value: '143', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-100' },
-    { name: 'Synced to COBRA', value: '2,689', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { name: 'Sync Errors', value: '10', icon: AlertCircle, color: 'text-red-600', bg: 'bg-red-100' },
+    { 
+      name: 'Total Orders', 
+      value: orderStats.total.toLocaleString(), 
+      icon: ArrowUpRight, 
+      gradient: 'from-blue-600 to-indigo-500',
+      shadow: 'shadow-blue-500/30',
+      trend: '+12.5%' // Kept static for visual flair, could calculate week-over-week later
+    },
+    { 
+      name: 'Pending Sync', 
+      value: orderStats.pending.toLocaleString(), 
+      icon: Clock, 
+      gradient: 'from-amber-400 to-orange-500',
+      shadow: 'shadow-amber-500/30',
+      trend: '-2.4%'
+    },
+    { 
+      name: 'Synced to COBRA', 
+      value: orderStats.synced.toLocaleString(), 
+      icon: CheckCircle2, 
+      gradient: 'from-emerald-400 to-teal-500',
+      shadow: 'shadow-emerald-500/30',
+      trend: '+18.2%'
+    },
+    { 
+      name: 'Requires Attention', 
+      value: orderStats.errors.toLocaleString(), 
+      icon: AlertCircle, 
+      gradient: 'from-rose-400 to-red-500',
+      shadow: 'shadow-red-500/30',
+      trend: '-1.1%'
+    },
   ];
 
+  // Helper to generate a time-based greeting
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const displayName = user?.name || user?.firstName || 'Admin';
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">Overview of your DSM order operations today.</p>
+    <div className="relative space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      
+      {/* Subtle Background Orbs to enhance the Glassmorphism */}
+      <div className="absolute top-0 right-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute -bottom-10 left-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+
+      {/* Premium Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+            {getGreeting()}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">{displayName}</span>
+          </h1>
+          <p className="mt-2 text-base font-medium text-gray-500">
+            Here is what's happening with your DSM order operations today.
+          </p>
+        </div>
+        <button className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/50 border border-white/60 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm backdrop-blur-md hover:bg-white/80 transition-all duration-300">
+          <TrendingUp className="h-4 w-4 text-blue-600" /> View Analytics
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Glassmorphic Stats Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
-          <div key={stat.name} className="overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${stat.bg}`}>
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
+          <div 
+            key={stat.name} 
+            className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:bg-white/60 group"
+          >
+            {/* Top Row: Icon & Trend */}
+            <div className="flex items-start justify-between mb-4">
+              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr ${stat.gradient} text-white shadow-lg ${stat.shadow} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                <stat.icon className="h-6 w-6" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                <p className="text-2xl font-semibold text-gray-900">{stat.value}</p>
-              </div>
+              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold border ${stat.trend.startsWith('+') ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50' : 'bg-red-50/80 text-red-700 border-red-200/50'}`}>
+                {stat.trend}
+              </span>
             </div>
+
+            {/* Bottom Row: Info */}
+            <div>
+              <div className="flex items-center gap-3">
+                <p className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                  {ordersStatus === 'loading' ? <Loader2 className="h-6 w-6 animate-spin text-gray-400 mt-1" /> : stat.value}
+                </p>
+              </div>
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mt-1">{stat.name}</p>
+            </div>
+
+            {/* Decorative Corner Blur */}
+            <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr ${stat.gradient} opacity-10 blur-2xl transition-opacity duration-500 group-hover:opacity-20 pointer-events-none`}></div>
           </div>
         ))}
       </div>
+
+      {/* Recent Sync Activity Placeholder */}
+      <div className="mt-8 rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-bold text-gray-900">Recent Sync Activity</h2>
+          <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors">View All</button>
+        </div>
+        <div className="flex h-48 items-center justify-center rounded-2xl border border-dashed border-gray-300 bg-white/30">
+          <p className="text-sm font-medium text-gray-500">Activity chart will render here</p>
+        </div>
+      </div>
+
     </div>
   );
 }

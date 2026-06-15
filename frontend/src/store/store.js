@@ -4,6 +4,7 @@ import cartReducer from './slices/cartSlice';
 import inventoryReducer from './slices/inventorySlice';
 import addressReducer from './slices/addressSlice';
 import authReducer from './slices/authSlice';
+import carrierReducer from './slices/carrierSlice'; 
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     inventory: inventoryReducer,
     addresses: addressReducer,
     auth: authReducer,
+    carriers: carrierReducer, 
   },
 });
 

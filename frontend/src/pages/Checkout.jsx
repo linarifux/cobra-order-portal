@@ -3,12 +3,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByCustomer, createAddress } from '../store/slices/addressSlice';
+import { fetchCustomerCarriers } from '../store/slices/carrierSlice';
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
-  FileText, ShieldCheck, Loader2, Package, Check, Truck
+  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
 } from 'lucide-react';
 
-const CUSTOMER_ID = '6a266dc144c2698dcc55390c';
+const CUSTOMER_ID = '6a2f8d67f09f2fb95eaf4ba6';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const EMPTY_ADDRESS_FORM = {
@@ -26,8 +27,10 @@ export default function Checkout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
+  // Redux State
   const cartItems = useSelector(state => state.cart.items);
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
+  const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers); 
   
   // Checkout Form State
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -37,7 +40,6 @@ export default function Checkout() {
   // Shipping Method State
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('');
-  const [isLoadingShipping, setIsLoadingShipping] = useState(true);
 
   // Auto-generated Order Number
   const [orderNumber] = useState(generateOrderNumber());
@@ -54,55 +56,33 @@ export default function Checkout() {
     }
   }, [addressStatus, dispatch]);
 
-  // 2. Fetch Customer Carrier/Shipping Configurations
+  // 2. Fetch Customer Carrier/Shipping Configurations via Redux
   useEffect(() => {
-    const fetchShippingMethods = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_URL}/customers/${CUSTOMER_ID}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-          }
-        });
-        const data = await response.json();
+    if (carrierStatus === 'idle') {
+      dispatch(fetchCustomerCarriers(CUSTOMER_ID));
+    }
+  }, [carrierStatus, dispatch]);
 
-        if (data.status === 'success' && data.data?.customer?.carrierConfigurations) {
-          const configs = data.data.customer.carrierConfigurations;
-          const flattenedOptions = [];
+  // 3. Process Carriers when fetched successfully
+  useEffect(() => {
+    if (carrierStatus === 'succeeded' && carriers) {
+      // The backend now returns a perfectly flattened array of allowed services
+      // We just map it directly into the format our dropdown expects.
+      const flattenedOptions = (Array.isArray(carriers) ? carriers : []).map(service => ({
+        code: service.serviceCode,
+        label: service.displayLabel,
+        carrierId: service.carrierId,
+        carrierType: service.carrierType
+      }));
 
-          configs.forEach(config => {
-            if (config.isActive && config.carrier?.isActive) {
-              const carrierName = config.carrier.carrierType; // e.g. "FedEx"
-              const carrierId = config.carrier._id;
-              
-              config.allowedServices.forEach(service => {
-                if (service.isActive) {
-                  flattenedOptions.push({
-                    code: service.serviceCode,
-                    label: `${carrierName} - ${service.serviceName}`,
-                    carrierId: carrierId,
-                    carrierType: carrierName
-                  });
-                }
-              });
-            }
-          });
-
-          setShippingOptions(flattenedOptions);
-          if (flattenedOptions.length > 0) {
-            setSelectedShippingMethod(flattenedOptions[0].code);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load shipping configurations:', err);
-      } finally {
-        setIsLoadingShipping(false);
+      setShippingOptions(flattenedOptions);
+      
+      // Auto-select the first option if available
+      if (flattenedOptions.length > 0) {
+        setSelectedShippingMethod(flattenedOptions[0].code);
       }
-    };
-
-    fetchShippingMethods();
-  }, []);
+    }
+  }, [carriers, carrierStatus]);
 
   const handleAddressSelect = (e) => {
     const id = e.target.value;
@@ -257,7 +237,7 @@ export default function Checkout() {
           </div>
           <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your order queue is empty</h2>
           <p className="text-gray-500 font-medium mt-2 mb-8">
-            You need to add products to your cart before you can proceed to the COBRA checkout.
+            You need to add products to your cart before you can proceed to the checkout.
           </p>
           <Link to="/products" className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95">
             Browse Products
@@ -286,7 +266,7 @@ export default function Checkout() {
         </button>
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Secure Checkout</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Review your order and submit to COBRA.</p>
+          <p className="text-sm font-medium text-gray-500 mt-1">Review your order and submit for fulfillment.</p>
         </div>
       </div>
 
@@ -450,7 +430,7 @@ export default function Checkout() {
                 Preferred Service <span className="text-red-500">*</span>
               </label>
               
-              {isLoadingShipping ? (
+              {carrierStatus === 'loading' ? (
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-500 h-12 px-4 border border-white/60 bg-white/50 rounded-xl">
                   <Loader2 className="h-4 w-4 animate-spin" /> Fetching available services...
                 </div>
@@ -588,7 +568,7 @@ export default function Checkout() {
               <button 
                 type="button"
                 onClick={handlePlaceOrder}
-                disabled={isSubmitting || isLoadingShipping || shippingOptions.length === 0}
+                disabled={isSubmitting || carrierStatus === 'loading' || shippingOptions.length === 0}
                 className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (

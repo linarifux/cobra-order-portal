@@ -1,19 +1,22 @@
 import { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchOrders } from '../store/slices/orderSlice';
-import { ArrowUpRight, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2 } from 'lucide-react';
+import { ArrowUpRight, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2, Shield } from 'lucide-react';
 
 export default function Home() {
   const dispatch = useDispatch();
+  
+  // Extract user from Redux auth slice (populated from localStorage 'dsm_user')
   const { user } = useSelector((state) => state.auth);
   const { items: orders, status: ordersStatus } = useSelector((state) => state.orders);
 
-  // Fetch orders when the dashboard loads
+  // Fetch orders when the dashboard loads, explicitly tied to the user's customer context
   useEffect(() => {
-    if (ordersStatus === 'idle') {
-      dispatch(fetchOrders());
+    if (ordersStatus === 'idle' && user?.customer) {
+      // Assuming your orderSlice can accept the customer ID or division array to filter
+      dispatch(fetchOrders(user.customer));
     }
-  }, [ordersStatus, dispatch]);
+  }, [ordersStatus, dispatch, user?.customer]);
 
   // Dynamically calculate order statistics based on your backend schema statuses
   const orderStats = useMemo(() => {
@@ -22,9 +25,7 @@ export default function Home() {
     return {
       total: orders.length,
       pending: orders.filter(o => o.status === 'Pending').length,
-      // Grouping active/completed states as "Synced to COBRA"
       synced: orders.filter(o => ['Processing', 'Ready to Ship', 'Shipped', 'Delivered'].includes(o.status)).length,
-      // Grouping problematic states as "Errors/Action Needed"
       errors: orders.filter(o => ['Cancelled', 'On Hold'].includes(o.status)).length,
     };
   }, [orders]);
@@ -36,7 +37,7 @@ export default function Home() {
       icon: ArrowUpRight, 
       gradient: 'from-blue-600 to-indigo-500',
       shadow: 'shadow-blue-500/30',
-      trend: '+12.5%' // Kept static for visual flair, could calculate week-over-week later
+      trend: '+12.5%'
     },
     { 
       name: 'Pending Sync', 
@@ -64,7 +65,6 @@ export default function Home() {
     },
   ];
 
-  // Helper to generate a time-based greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -72,7 +72,7 @@ export default function Home() {
     return 'Good evening';
   };
 
-  const displayName = user?.name || user?.firstName || 'Admin';
+  const displayName = user?.name || user?.firstName || 'User';
 
   return (
     <div className="relative space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -84,10 +84,18 @@ export default function Home() {
       {/* Premium Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-            {getGreeting()}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">{displayName}</span>
-          </h1>
-          <p className="mt-2 text-base font-medium text-gray-500">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
+              {getGreeting()}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600">{displayName}</span>
+            </h1>
+            {user?.role && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100/80 text-blue-700 text-[10px] font-bold uppercase tracking-widest border border-blue-200/50 shadow-sm backdrop-blur-md">
+                <Shield className="h-3 w-3" />
+                {user.role.replace('_', ' ')}
+              </span>
+            )}
+          </div>
+          <p className="text-base font-medium text-gray-500">
             Here is what's happening with your DSM order operations today.
           </p>
         </div>
@@ -103,7 +111,6 @@ export default function Home() {
             key={stat.name} 
             className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 p-6 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] hover:bg-white/60 group"
           >
-            {/* Top Row: Icon & Trend */}
             <div className="flex items-start justify-between mb-4">
               <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr ${stat.gradient} text-white shadow-lg ${stat.shadow} transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3`}>
                 <stat.icon className="h-6 w-6" />
@@ -113,7 +120,6 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Bottom Row: Info */}
             <div>
               <div className="flex items-center gap-3">
                 <p className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -123,7 +129,6 @@ export default function Home() {
               <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mt-1">{stat.name}</p>
             </div>
 
-            {/* Decorative Corner Blur */}
             <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr ${stat.gradient} opacity-10 blur-2xl transition-opacity duration-500 group-hover:opacity-20 pointer-events-none`}></div>
           </div>
         ))}

@@ -9,14 +9,12 @@ import {
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
 } from 'lucide-react';
 
-const CUSTOMER_ID = '6a2f8d67f09f2fb95eaf4ba6';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const EMPTY_ADDRESS_FORM = {
   firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
 };
 
-// Utility to generate a random order number
 const generateOrderNumber = () => {
   const year = new Date().getFullYear();
   const randomSuffix = Math.floor(100000 + Math.random() * 900000);
@@ -26,6 +24,9 @@ const generateOrderNumber = () => {
 export default function Checkout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  
+  // Extract user context from Redux globally
+  const { user } = useSelector(state => state.auth);
   
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
@@ -41,7 +42,7 @@ export default function Checkout() {
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('');
 
-  // Auto-generated Order Number
+  // Order Details
   const [orderNumber] = useState(generateOrderNumber());
   const [poNumber, setPoNumber] = useState(''); 
   const [orderNotes, setOrderNotes] = useState('');
@@ -49,25 +50,23 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
-  // 1. Fetch Addresses
+  // 1. Fetch Addresses scoped dynamically to the logged-in User's Customer ID
   useEffect(() => {
-    if (addressStatus === 'idle') {
-      dispatch(fetchAddressesByCustomer(CUSTOMER_ID));
+    if (addressStatus === 'idle' && user?.customer) {
+      dispatch(fetchAddressesByCustomer(user.customer));
     }
-  }, [addressStatus, dispatch]);
+  }, [addressStatus, dispatch, user?.customer]);
 
-  // 2. Fetch Customer Carrier/Shipping Configurations via Redux
+  // 2. Fetch Customer Carrier/Shipping Configurations via Redux dynamically
   useEffect(() => {
-    if (carrierStatus === 'idle') {
-      dispatch(fetchCustomerCarriers(CUSTOMER_ID));
+    if (carrierStatus === 'idle' && user?.customer) {
+      dispatch(fetchCustomerCarriers(user.customer));
     }
-  }, [carrierStatus, dispatch]);
+  }, [carrierStatus, dispatch, user?.customer]);
 
   // 3. Process Carriers when fetched successfully
   useEffect(() => {
     if (carrierStatus === 'succeeded' && carriers) {
-      // The backend now returns a perfectly flattened array of allowed services
-      // We just map it directly into the format our dropdown expects.
       const flattenedOptions = (Array.isArray(carriers) ? carriers : []).map(service => ({
         code: service.serviceCode,
         label: service.displayLabel,
@@ -77,7 +76,6 @@ export default function Checkout() {
 
       setShippingOptions(flattenedOptions);
       
-      // Auto-select the first option if available
       if (flattenedOptions.length > 0) {
         setSelectedShippingMethod(flattenedOptions[0].code);
       }
@@ -133,7 +131,7 @@ export default function Checkout() {
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (cartItems.length === 0) return;
+    if (cartItems.length === 0 || !user?.customer) return;
 
     if (!addressForm.firstName || !addressForm.lastName || !addressForm.contactEmail || !addressForm.contactPhone || !addressForm.street1 || !addressForm.city || !addressForm.state || !addressForm.zipCode) {
       setFormError('Please fill in all required shipping fields marked with *');
@@ -153,7 +151,7 @@ export default function Checkout() {
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          customer: CUSTOMER_ID, 
+          customer: user.customer, // Dynamic injection
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -179,7 +177,8 @@ export default function Checkout() {
 
       const orderPayload = {
         orderNumber,
-        customer: CUSTOMER_ID,
+        customer: user.customer, // Dynamic injection
+        divisions: user.divisions || [], // Forward user access array to backend order record
         items: formattedItems,
         totalAmount: total,
         shippingAddress: {
@@ -228,6 +227,17 @@ export default function Checkout() {
     }
   };
 
+  if (!user?.customer) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
+        <div className="flex flex-col items-center gap-4 text-gray-500">
+          <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+          <p className="font-bold tracking-tight">Authenticating access context...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (cartItems.length === 0) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
@@ -247,7 +257,6 @@ export default function Checkout() {
     );
   }
 
-  // Common premium input class
   const premiumInputClass = "w-full h-12 px-4 rounded-xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-inner";
 
   return (

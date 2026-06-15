@@ -17,7 +17,7 @@ export default function Login() {
   // Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/orders'); // Or wherever your main dashboard is
+      navigate('/'); // Or wherever your main dashboard is
     }
   }, [isAuthenticated, navigate]);
 

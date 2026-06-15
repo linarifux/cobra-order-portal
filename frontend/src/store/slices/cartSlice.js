@@ -3,7 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 // Helper function to safely read from localStorage
 const loadCartFromStorage = () => {
   try {
-    const savedCart = localStorage.getItem('dsm_cart_items');
+    const savedCart = localStorage.getItem('cp_cart_items');
     return savedCart ? JSON.parse(savedCart) : [];
   } catch (error) {
     console.warn("Failed to load cart from storage", error);

@@ -1,24 +1,36 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Download, Filter, Loader2, AlertCircle, Search, ClipboardList, TrendingUp } from 'lucide-react';
+import { Download, Loader2, AlertCircle, Search, ClipboardList } from 'lucide-react';
 import { fetchOrders } from '../store/slices/orderSlice';
 
 export default function Orders() {
   const dispatch = useDispatch();
+  
+  // Extract user context from Redux auth slice
+  const { user } = useSelector(state => state.auth);
   const { items: orders, status, error } = useSelector(state => state.orders);
   
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchOrders());
-    }
-  }, [status, dispatch]);
+  // Safely grab dynamic customer context from session
+  const customerId = user?.customer;
 
+  // FIX: Fetch fresh orders on every component mount whenever the session context is verified
+  useEffect(() => {
+    if (customerId) {
+      dispatch(fetchOrders(customerId));
+    }
+  }, [dispatch, customerId]);
+
+  // Sort and filter orders completely in client-side memo layer
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(order => {
+
+    // FIX: Clone and sort array to guarantee most recent transactions appear at the very top
+    const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    return sorted.filter(order => {
       const query = searchQuery.toLowerCase();
       return (
         (order.orderNumber || '').toLowerCase().includes(query) ||
@@ -56,6 +68,7 @@ export default function Orders() {
     });
   };
 
+  // --- Loader States ---
   if (status === 'loading' && orders.length === 0) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
@@ -75,7 +88,7 @@ export default function Orders() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load orders</h2>
           <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => dispatch(fetchOrders())} 
+            onClick={() => customerId && dispatch(fetchOrders(customerId))} 
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
@@ -88,7 +101,7 @@ export default function Orders() {
   return (
     <div className="relative space-y-6 animate-in fade-in duration-700">
       
-      {/* Subtle Background Orbs */}
+      {/* Subtle Background Decorative Orbs */}
       <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 

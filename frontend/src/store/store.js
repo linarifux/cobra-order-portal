@@ -24,7 +24,7 @@ store.subscribe(() => {
     const currentCartItems = store.getState().cart.items;
     
     // Save the exact array back to the browser
-    localStorage.setItem('dsm_cart_items', JSON.stringify(currentCartItems));
+    localStorage.setItem('cp_cart_items', JSON.stringify(currentCartItems));
   } catch (error) {
     console.warn("Failed to save cart to storage", error);
   }

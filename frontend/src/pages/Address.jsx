@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom'; // <-- Fixed missing import
 import { 
   MapPin, Plus, Search, Edit2, Trash2, 
   Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check, Users
@@ -12,7 +13,7 @@ import {
   deleteAddress 
 } from '../store/slices/addressSlice'; 
 
-// Strictly matching the updated Schema
+// Strictly matching the updated database schema
 const EMPTY_FORM = {
   firstName: '', 
   lastName: '',
@@ -28,25 +29,29 @@ const EMPTY_FORM = {
   isDefault: false
 };
 
-const CUSTOMER_ID = '6a266dc144c2698dcc55390c';
-
 export default function Address() {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   
+  // Connect to Redux Auth to get the user's logged-in profile context
+  const { user } = useSelector((state) => state.auth);
   const { items: addresses, status, error } = useSelector((state) => state.addresses);
   
   const [searchQuery, setSearchQuery] = useState('');
-  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Safely extract the dynamic Customer ID from the login session
+  const customerId = user?.customer;
+
+  // Fetch addresses reliably on mount whenever the user's customer context is available
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchAddressesByCustomer(CUSTOMER_ID));
+    if (customerId) {
+      dispatch(fetchAddressesByCustomer(customerId));
     }
-  }, [status, dispatch]);
+  }, [dispatch, customerId]);
 
   const filteredAddresses = useMemo(() => {
     if (!addresses) return [];
@@ -65,7 +70,7 @@ export default function Address() {
     if (address) {
       setFormData({
         ...EMPTY_FORM,
-        ...address // Spread to ensure all keys exist even if missing from db
+        ...address 
       });
       setEditingId(address._id);
     } else {
@@ -92,11 +97,12 @@ export default function Address() {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!customerId) return;
     setIsSubmitting(true);
 
     const payload = {
       ...formData,
-      customer: CUSTOMER_ID
+      customer: customerId 
     };
 
     try {
@@ -122,8 +128,9 @@ export default function Address() {
     }
   };
 
-  // --- Render States ---
-  if (status === 'loading' && addresses.length === 0) {
+  // --- Loader States ---
+  // FIX: Shows the loading sequence for the duration of the operational dispatch request
+  if (status === 'loading') {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
@@ -142,7 +149,7 @@ export default function Address() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load addresses</h2>
           <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => dispatch(fetchAddressesByCustomer(CUSTOMER_ID))}
+            onClick={() => customerId && dispatch(fetchAddressesByCustomer(customerId))}
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
@@ -155,7 +162,7 @@ export default function Address() {
   return (
     <div className="relative space-y-6 animate-in fade-in duration-700">
       
-      {/* Subtle Background Orbs */}
+      {/* Subtle Background Decorative Orbs */}
       <div className="absolute top-10 right-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute bottom-10 left-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
@@ -192,21 +199,18 @@ export default function Address() {
         </div>
       </div>
 
-      {/* Glassmorphic Address Grid */}
+      {/* Address Grid */}
       {filteredAddresses.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredAddresses.map((addr) => (
             <div key={addr._id} className="relative flex flex-col rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/60 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden group">
               
-              {/* Optional glow for active/default */}
               {addr.isDefault && (
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-400 opacity-10 blur-2xl pointer-events-none transition-opacity group-hover:opacity-20"></div>
               )}
 
               {/* Card Header */}
               <div className="flex items-start justify-between p-6 border-b border-white/50 bg-white/30 relative z-10">
-                
-                {/* Default Badge */}
                 {addr.isDefault && (
                   <div className="absolute top-0 right-0 rounded-bl-2xl bg-amber-100/80 backdrop-blur-sm px-4 py-1.5 text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5 border-b border-l border-amber-200/50">
                     <Star className="h-3 w-3" fill="currentColor" /> Default
@@ -245,7 +249,7 @@ export default function Address() {
               </div>
 
               {/* Card Body */}
-              <div className="p-6 flex-1 flex flex-col gap-4 relative z-10">
+              <div className="p-6 relative z-10 flex flex-col flex-1 gap-4">
                 <div className="flex items-start gap-3 text-sm font-medium text-gray-600">
                   <MapPin className="h-4 w-4 text-blue-500/70 mt-0.5 flex-shrink-0" />
                   <span className="leading-relaxed">
@@ -274,7 +278,6 @@ export default function Address() {
           ))}
         </div>
       ) : (
-        /* Empty State */
         <div className="flex flex-col items-center justify-center rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl py-24 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
           <div className="h-20 w-20 bg-white/50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-white/60">
             <Map className="h-10 w-10 text-gray-400" />
@@ -293,8 +296,7 @@ export default function Address() {
       {/* Add/Edit Premium Glass Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          {/* Changed to flex-col and max-h-full so the body scrolls but the modal itself never touches the edges */}
-          <div className="bg-white/90 backdrop-blur-3xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white w-full max-w-lg max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="bg-white/90 backdrop-blur-3xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             
             <div className="flex-shrink-0 flex items-center justify-between px-8 py-6 border-b border-gray-200/50 bg-white/40">
               <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
@@ -309,7 +311,6 @@ export default function Address() {
             </div>
 
             <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
-              {/* Scrollable Form Body */}
               <div className="flex-1 overflow-y-auto p-8 space-y-5 custom-scrollbar">
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

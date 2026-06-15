@@ -18,7 +18,7 @@ export default function Products() {
   // Fetch Inventory on mount (Using the DSM Customer ID)
   useEffect(() => {
     if (status === 'idle') {
-      dispatch(fetchInventory('6a266dc144c2698dcc55390c'));
+      dispatch(fetchInventory('6a2f8d67f09f2fb95eaf4ba6'));
     }
   }, [status, dispatch]);
 
@@ -100,7 +100,7 @@ export default function Products() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
           <p className="text-gray-500 mt-2">{error}</p>
           <button 
-            onClick={() => dispatch(fetchInventory('6a266dc144c2698dcc55390c'))}
+            onClick={() => dispatch(fetchInventory('6a2f8d67f09f2fb95eaf4ba6'))}
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-medium transition-all"
           >
             Try Again

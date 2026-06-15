@@ -5,7 +5,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 // Helper to safely load user from storage on initial load
 const loadUserFromStorage = () => {
   try {
-    const savedUser = localStorage.getItem('dsm_user');
+    const savedUser = localStorage.getItem('cp_user');
     return savedUser ? JSON.parse(savedUser) : null;
   } catch (error) {
     return null;
@@ -25,17 +25,19 @@ export const loginUser = createAsyncThunk(
       });
 
       const data = await response.json();
+      console.log(data)
 
       if (!response.ok) {
         throw new Error(data.message || 'Invalid email or password');
       }
 
       // Assuming your API returns { status: 'success', data: { user: {...}, token: '...' } }
-      const { user, token } = data.data;
+      const { user } = data.data;
+      const {token} = data
 
       // Persist to local storage
       localStorage.setItem('token', token);
-      localStorage.setItem('dsm_user', JSON.stringify(user));
+      localStorage.setItem('cp_user', JSON.stringify(user));
 
       return { user, token };
     } catch (error) {
@@ -61,7 +63,7 @@ const authSlice = createSlice({
       state.status = 'idle';
       state.error = null;
       localStorage.removeItem('token');
-      localStorage.removeItem('dsm_user');
+      localStorage.removeItem('cp_user');
     },
     clearAuthError: (state) => {
       state.error = null;

@@ -146,8 +146,9 @@ export default function Navbar() {
                               <span className="inline-flex items-center justify-center rounded-md bg-gray-100/80 px-2 py-0.5 text-xs font-semibold text-gray-700 border border-gray-200/50">
                                 Qty: {item.quantity}
                               </span>
+                              
                               <span className="text-xs font-semibold text-blue-600">
-                                ${(getProductPrice(item.product) * item.quantity).toFixed(2)}
+                                ${(getProductPrice(item.price) * item.quantity).toFixed(2)}
                               </span>
                             </div>
                           </div>

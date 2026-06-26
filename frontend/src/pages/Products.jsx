@@ -8,27 +8,36 @@ import { Search, Plus, ShoppingCart, ChevronRight, Layers, Loader2, AlertCircle 
 export default function Products() {
   const dispatch = useDispatch();
   
-  // Redux State
+  // Connect to Redux Auth to get the user's logged-in profile context
+  const { user } = useSelector((state) => state.auth);
   const { items, status, error } = useSelector((state) => state.inventory);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [quantities, setQuantities] = useState({});
 
-  // Fetch Inventory on mount (Using the DSM Customer ID)
-  useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchInventory('6a2f8d67f09f2fb95eaf4ba6'));
-    }
-  }, [status, dispatch]);
+  // Safely extract dynamic context from the session profile
+  const customerId = user?.customer;
+  const userAllowedDivisions = user?.divisions || [];
 
-  // Dynamically derive sidebar categories from the API payload
+  // Fetch Inventory reliably on mount whenever the user's customer context is available
+  useEffect(() => {
+    if (customerId) {
+      dispatch(fetchInventory(customerId));
+    }
+  }, [dispatch, customerId]);
+
+  // Dynamically derive sidebar categories from items matching the user's allowed division access
   const dynamicCategories = useMemo(() => {
     const categoryMap = {};
     
     items.forEach(item => {
-      const divisionName = item.divisions?.[0]?.divisionName || 'Uncategorized';
-      const catName = item.categories?.[0]?.categoryName || 'General';
+      // Access Filtering: Verify if the user has permission for this item's specific division ID
+      const hasDivisionAccess = userAllowedDivisions.includes(item.division?._id || item.division);
+      if (!hasDivisionAccess) return;
+
+      const divisionName = item.division?.divisionName || 'Uncategorized';
+      const catName = item.category1?.categoryName || 'General';
       
       if (!categoryMap[divisionName]) {
         categoryMap[divisionName] = new Set();
@@ -40,31 +49,41 @@ export default function Products() {
       division,
       sub: Array.from(subCats).sort()
     })).sort((a, b) => a.division.localeCompare(b.division));
-  }, [items]);
+  }, [items, userAllowedDivisions]);
 
-  // Map the raw MongoDB items to our UI structure
+  // Map the raw MongoDB items to our UI structure following the exact property schema
   const filteredProducts = useMemo(() => {
-    const mapped = items.map(item => ({
-      _id: item._id,
-      id: item.sku || 'N/A', // Using SKU as the display ID
-      desc: item.itemName || 'Unknown Item',
-      min: item.safetyBuffer || 0,
-      max: '-', // Not provided in API, using placeholder
-      available: item.unitsOnHand || 0,
-      onOrder: item.pipelineSupply || 0,
-      category: item.categories?.[0]?.categoryName || 'General',
-      division: item.divisions?.[0]?.divisionName || 'Uncategorized',
-      unitCost: item.unitCost
-    }));
+    const mapped = items
+      .filter(item => {
+        // Enforce boundary security check matching user profile division clearances
+        return userAllowedDivisions.includes(item.division?._id || item.division);
+      })
+      .map(item => ({
+        _id: item._id,
+        id: item.sku || 'N/A', 
+        desc: item.itemName || 'Unknown Item',
+        min: item.safetyBuffer || item.min || 0,
+        max: item.max || '-', 
+        available: item.unitsOnHand || 0,
+        onOrder: item.pipelineSupply || 0,
+        category: item.category1?.categoryName || 'General',
+        division: item.division?.divisionName || 'Uncategorized',
+        unitCost: item.unitCost || 0
+      }));
 
-    return mapped.filter(product => {
+    const finalFiltered = mapped.filter(product => {
       const matchesSearch = 
         product.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
         product.id.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = activeCategory === 'All' || product.category === activeCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [items, searchQuery, activeCategory]);
+
+    // FIX: Sort the products by item code (SKU) alphanumerically
+    return finalFiltered.sort((a, b) => 
+      a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
+    );
+  }, [items, searchQuery, activeCategory, userAllowedDivisions]);
 
   const handleQuantityChange = (id, value) => {
     if (value === '' || /^[0-9\b]+$/.test(value)) {
@@ -80,13 +99,13 @@ export default function Products() {
     }
   };
 
-  // --- Render States ---
-  if (status === 'loading') {
+  // --- Render Loader States ---
+  if (status === 'loading' || !customerId) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
           <Loader2 className="h-10 w-10 animate-spin" />
-          <p className="font-medium text-gray-600">Loading DSM Inventory...</p>
+          <p className="font-bold tracking-tight text-gray-600">Syncing Division Inventory...</p>
         </div>
       </div>
     );
@@ -98,10 +117,10 @@ export default function Products() {
         <div className="flex max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
           <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
-          <p className="text-gray-500 mt-2">{error}</p>
+          <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => dispatch(fetchInventory('6a2f8d67f09f2fb95eaf4ba6'))}
-            className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-medium transition-all"
+            onClick={() => customerId && dispatch(fetchInventory(customerId))}
+            className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
           </button>
@@ -113,7 +132,7 @@ export default function Products() {
   return (
     <div className="relative flex flex-col md:flex-row gap-6 h-[calc(100vh-10rem)] animate-in fade-in duration-700">
       
-      {/* Subtle Background Orbs */}
+      {/* Subtle Background Decorative Orbs */}
       <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
@@ -136,7 +155,7 @@ export default function Products() {
         <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
           {dynamicCategories.map((cat) => (
             <div key={cat.division} className="mb-6">
-              <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">
+              <h3 className="px-3 text-[10px] font-bold uppercase tracking-widest text-blue-600 mt-1 mb-2">
                 {cat.division}
               </h3>
               <div className="flex flex-col space-y-1">
@@ -205,7 +224,7 @@ export default function Products() {
             <tbody className="divide-y divide-white/40">
               {filteredProducts.length > 0 ? (
                 filteredProducts.map((product) => (
-                  <tr key={product.id} className="hover:bg-white/60 transition-colors duration-200 group">
+                  <tr key={product._id} className="hover:bg-white/60 transition-colors duration-200 group">
                     <td className="px-8 py-5">
                       <Link 
                         to={`/products/${encodeURIComponent(product.id)}`}
@@ -257,7 +276,7 @@ export default function Products() {
                         <Search className="h-8 w-8 text-gray-400" />
                       </div>
                       <p className="text-lg font-bold text-gray-900">No products found</p>
-                      <p className="text-sm font-medium text-gray-500 mt-1">Try adjusting your search or filter.</p>
+                      <p className="text-sm font-medium text-gray-500 mt-1">Check database connection or adjust your filtering parameters.</p>
                     </div>
                   </td>
                 </tr>

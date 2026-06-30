@@ -3,13 +3,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByCustomer, createAddress } from '../store/slices/addressSlice';
-import { fetchCarriersByDivision } from '../store/slices/carrierSlice'; // <-- Updated Thunk import
+import { fetchCarriers } from '../store/slices/carrierSlice'; // <-- Replaced with unified thunk
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 const EMPTY_ADDRESS_FORM = {
   firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
@@ -32,8 +32,6 @@ export default function Checkout() {
   const cartItems = useSelector(state => state.cart.items);
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
   const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers); 
-  
-  console.log(carriers);
   
   // Checkout Form State
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -59,24 +57,37 @@ export default function Checkout() {
     }
   }, [addressStatus, dispatch, user?.customer]);
 
-  // 2. FIX: Fetch Carrier Configurations dynamically scoped by active Division ID
+  // 2. Fetch Carrier Configurations dynamically scoped by the User's primary Division
   useEffect(() => {
     if (carrierStatus === 'idle' && user?.divisions?.[0]) {
-      dispatch(fetchCarriersByDivision(user.divisions[0]));
+      const divisionId = user.divisions[0]._id || user.divisions[0];
+      dispatch(fetchCarriers(divisionId));
     }
   }, [carrierStatus, dispatch, user?.divisions]);
 
-  // 3. Process Carriers when fetched successfully
+  // 3. Process Carriers matching the new backend schema
   useEffect(() => {
     if (carrierStatus === 'succeeded' && carriers) {
-      console.log(carriers);
+      const flattenedOptions = [];
       
-      const flattenedOptions = (Array.isArray(carriers) ? carriers : []).map(service => ({
-        code: service.serviceCode,
-        label: service.displayLabel,
-        carrierId: service.carrierId,
-        carrierType: service.carrierType
-      }));
+      if (Array.isArray(carriers)) {
+        carriers.forEach(carrier => {
+          // Skip if the carrier account itself is disabled
+          if (carrier.isActive && carrier.enabledServices) {
+            carrier.enabledServices.forEach(service => {
+              // Only push services specifically enabled in this division's config
+              if (service.isActive) {
+                flattenedOptions.push({
+                  code: service.serviceCode,
+                  label: `${carrier.carrierType} - ${service.serviceName}`,
+                  carrierId: carrier._id,
+                  carrierType: carrier.carrierType
+                });
+              }
+            });
+          }
+        });
+      }
 
       setShippingOptions(flattenedOptions);
       
@@ -409,7 +420,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* Save Checkbox */}
                 {!selectedAddressId && (
                   <div className="pt-6 pb-2">
                     <label className="flex items-center gap-3 cursor-pointer group w-max">
@@ -449,7 +459,7 @@ export default function Checkout() {
                 </div>
               ) : shippingOptions.length === 0 ? (
                 <div className="text-sm font-medium text-red-600 h-12 px-4 border border-red-200/50 bg-red-50/80 rounded-xl flex items-center shadow-sm">
-                  No shipping services are available for this customer.
+                  No shipping services are available for this division. Please contact support.
                 </div>
               ) : (
                 <div className="relative">
@@ -460,7 +470,7 @@ export default function Checkout() {
                   >
                     <option value="" disabled>Choose a shipping method...</option>
                     {shippingOptions.map(option => (
-                      <option key={option.code} value={option.code}>
+                      <option key={`${option.carrierId}-${option.code}`} value={option.code}>
                         {option.label}
                       </option>
                     ))}

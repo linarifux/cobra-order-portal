@@ -11,22 +11,22 @@ const getAuthHeaders = () => {
   };
 };
 
-// Async Thunk to fetch carriers for a specific customer
-export const fetchCustomerCarriers = createAsyncThunk(
-  'carriers/fetchCustomerCarriers',
-  async (customerId, { rejectWithValue }) => {
+// Async Thunk refactored to fetch carriers for a specific division
+export const fetchCarriersByDivision = createAsyncThunk(
+  'carriers/fetchCarriersByDivision',
+  async (divisionId, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_URL}/customers/${customerId}/carriers`, {
+      const response = await fetch(`${API_URL}/divisions/${divisionId}/carriers`, {
         headers: getAuthHeaders()
       });
       
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to fetch shipping methods');
+        throw new Error(data.message || 'Failed to fetch shipping methods for this division');
       }
 
-      // We extract the cleanly flattened array provided by the updated backend route
+      // Extract the flattened carrier services array from the response data layer
       return data.data?.carriers || [];
     } catch (error) {
       return rejectWithValue(error.message);
@@ -50,15 +50,15 @@ const carrierSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchCustomerCarriers.pending, (state) => {
+      .addCase(fetchCarriersByDivision.pending, (state) => {
         state.status = 'loading';
         state.error = null;
       })
-      .addCase(fetchCustomerCarriers.fulfilled, (state, action) => {
+      .addCase(fetchCarriersByDivision.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.items = action.payload; // Saves the flattened array to state
+        state.items = action.payload; 
       })
-      .addCase(fetchCustomerCarriers.rejected, (state, action) => {
+      .addCase(fetchCarriersByDivision.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       });

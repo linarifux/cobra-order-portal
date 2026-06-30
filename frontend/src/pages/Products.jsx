@@ -16,7 +16,7 @@ export default function Products() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [quantities, setQuantities] = useState({});
 
-  // Safely extract dynamic context from the session profile
+  // Safely extract dynamic customer context from the session profile
   const customerId = user?.customer;
   const userAllowedDivisions = user?.divisions || [];
 
@@ -68,7 +68,10 @@ export default function Products() {
         onOrder: item.pipelineSupply || 0,
         category: item.category1?.categoryName || 'General',
         division: item.division?.divisionName || 'Uncategorized',
-        unitCost: item.unitCost || 0
+        // Fallbacks assigned together to prevent calculation mismatch across layout items
+        price: item.price || 0,
+        cost: item.unitCost || item.price || 0,
+        unitCost: item.unitCost || item.price || 0
       }));
 
     const finalFiltered = mapped.filter(product => {
@@ -79,7 +82,7 @@ export default function Products() {
       return matchesSearch && matchesCategory;
     });
 
-    // FIX: Sort the products by item code (SKU) alphanumerically
+    // Sort the products alphanumerically by item code (SKU)
     return finalFiltered.sort((a, b) => 
       a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
     );

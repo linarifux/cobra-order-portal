@@ -3,13 +3,13 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByCustomer, createAddress } from '../store/slices/addressSlice';
-import { fetchCustomerCarriers } from '../store/slices/carrierSlice';
+import { fetchCarriersByDivision } from '../store/slices/carrierSlice'; // <-- Updated Thunk import
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const EMPTY_ADDRESS_FORM = {
   firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
@@ -32,6 +32,8 @@ export default function Checkout() {
   const cartItems = useSelector(state => state.cart.items);
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
   const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers); 
+  
+  console.log(carriers);
   
   // Checkout Form State
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -57,16 +59,18 @@ export default function Checkout() {
     }
   }, [addressStatus, dispatch, user?.customer]);
 
-  // 2. Fetch Customer Carrier/Shipping Configurations via Redux dynamically
+  // 2. FIX: Fetch Carrier Configurations dynamically scoped by active Division ID
   useEffect(() => {
-    if (carrierStatus === 'idle' && user?.customer) {
-      dispatch(fetchCustomerCarriers(user.customer));
+    if (carrierStatus === 'idle' && user?.divisions?.[0]) {
+      dispatch(fetchCarriersByDivision(user.divisions[0]));
     }
-  }, [carrierStatus, dispatch, user?.customer]);
+  }, [carrierStatus, dispatch, user?.divisions]);
 
   // 3. Process Carriers when fetched successfully
   useEffect(() => {
     if (carrierStatus === 'succeeded' && carriers) {
+      console.log(carriers);
+      
       const flattenedOptions = (Array.isArray(carriers) ? carriers : []).map(service => ({
         code: service.serviceCode,
         label: service.displayLabel,
@@ -121,7 +125,7 @@ export default function Checkout() {
   };
 
   const getProductPrice = (product) => {
-    return Number(product.cost || product.unitCost || 0);
+    return Number(product.price || product.unitCost || product.cost || 0);
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (getProductPrice(item.product) * item.quantity), 0);
@@ -151,7 +155,7 @@ export default function Checkout() {
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          customer: user.customer, // Dynamic injection
+          customer: user.customer, 
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -177,8 +181,8 @@ export default function Checkout() {
 
       const orderPayload = {
         orderNumber,
-        customer: user.customer, // Dynamic injection
-        divisions: user.divisions || [], // Forward user access array to backend order record
+        customer: user.customer, 
+        divisions: user.divisions || [], 
         items: formattedItems,
         totalAmount: total,
         shippingAddress: {

@@ -24,6 +24,18 @@ export default function Navbar() {
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
   const { user } = useSelector(state => state.auth);
 
+  // Keep track of previous cart count to avoid auto-opening on initial page load
+  const prevCartCountRef = useRef(cartCount);
+
+  // FIX: Watch the cart count and automatically drop open the drawer when a new item is added
+  useEffect(() => {
+    if (cartCount > prevCartCountRef.current) {
+      setIsCartOpen(true);
+    }
+    // Always sync the ref with the most up-to-date count
+    prevCartCountRef.current = cartCount;
+  }, [cartCount]);
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
     setIsCartOpen(false);
@@ -54,7 +66,9 @@ export default function Navbar() {
   };
 
   const getProductPrice = (product) => {
-    return Number(product.cost || product.unitCost || 0);
+    console.log(product);
+    
+    return Number(product.price);
   };
 
   const navLinks = [
@@ -147,8 +161,9 @@ export default function Navbar() {
                                 Qty: {item.quantity}
                               </span>
                               
+                              {/* FIX: Changed item.price mapping layout to accurately reference item.product */}
                               <span className="text-xs font-semibold text-blue-600">
-                                ${(getProductPrice(item.price) * item.quantity).toFixed(2)}
+                                ${(getProductPrice(item.product) * item.quantity).toFixed(2)}
                               </span>
                             </div>
                           </div>

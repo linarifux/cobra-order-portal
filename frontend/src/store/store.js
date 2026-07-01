@@ -1,30 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit';
+import authReducer from './slices/authSlice';
 import orderReducer from './slices/orderSlice';
 import cartReducer from './slices/cartSlice';
 import inventoryReducer from './slices/inventorySlice';
 import addressReducer from './slices/addressSlice';
-import authReducer from './slices/authSlice';
-import carrierReducer from './slices/carrierSlice'; 
+import carrierReducer from './slices/carrierSlice';
+import divisionReducer from './slices/divisionSlice'; 
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     orders: orderReducer,
     cart: cartReducer,
     inventory: inventoryReducer,
     addresses: addressReducer,
-    auth: authReducer,
-    carriers: carrierReducer, 
+    carriers: carrierReducer,
+    divisions: divisionReducer, 
   },
 });
 
-// Watch the Redux store for ANY changes
 store.subscribe(() => {
   try {
-    // Extract just the cart items from the global state
     const currentCartItems = store.getState().cart.items;
-    
-    // Save the exact array back to the browser
-    localStorage.setItem('cp_cart_items', JSON.stringify(currentCartItems));
+    localStorage.setItem('dsm_cart_items', JSON.stringify(currentCartItems));
   } catch (error) {
     console.warn("Failed to save cart to storage", error);
   }

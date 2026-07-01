@@ -1,15 +1,22 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import api from '../../utils/api'; // Ensure this points to your Axios instance with interceptors
+import api from '../../utils/api'; // Mapped to your authorized Axios instance
 
-// 1. Fetch ALL Inventory Assets
+// --- Thunks ---
+
+// 1. Fetch Inventory Assets (Supports fetching globally OR scoped to a specific division)
 export const fetchInventory = createAsyncThunk(
   'inventory/fetchInventory',
-  async (_, { rejectWithValue }) => {
+  async (divisionId = '', { rejectWithValue }) => {
     try {
-      const response = await api.get('/inventory');
-      return response.data.data.inventory || response.data.data;
+      // If a divisionId is provided, hit the division-scoped route; otherwise fallback to global inventory
+      const url = divisionId ? `/divisions/${divisionId}/inventories` : '/inventories';
+      const response = await api.get(url);
+      
+      return response.data?.data?.inventory || response.data?.data || [];
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch inventory');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to fetch inventory assets'
+      );
     }
   }
 );
@@ -20,9 +27,11 @@ export const fetchInventoryById = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await api.get(`/inventory/${id}`);
-      return response.data.data.inventory || response.data.data;
+      return response.data?.data?.inventory || response.data?.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch asset details');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to fetch asset details'
+      );
     }
   }
 );
@@ -32,10 +41,14 @@ export const createInventory = createAsyncThunk(
   'inventory/createInventory',
   async (inventoryData, { rejectWithValue }) => {
     try {
-      const response = await api.post('/inventory', inventoryData);
-      return response.data.data.inventory || response.data.data;
+      // Route through division context if explicitly provided inside the item initialization parameters
+      const url = inventoryData.division ? `/divisions/${inventoryData.division}/inventory` : '/inventory';
+      const response = await api.post(url, inventoryData);
+      return response.data?.data?.inventory || response.data?.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to create asset');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to create inventory asset'
+      );
     }
   }
 );
@@ -46,9 +59,11 @@ export const updateInventory = createAsyncThunk(
   async ({ id, inventoryData }, { rejectWithValue }) => {
     try {
       const response = await api.put(`/inventory/${id}`, inventoryData);
-      return response.data.data.inventory || response.data.data;
+      return response.data?.data?.inventory || response.data?.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to update asset');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to update inventory asset'
+      );
     }
   }
 );
@@ -61,12 +76,14 @@ export const deleteInventory = createAsyncThunk(
       await api.delete(`/inventory/${id}`);
       return id; 
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to delete asset');
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to delete inventory asset'
+      );
     }
   }
 );
 
-
+// --- Slice Definition ---
 const inventorySlice = createSlice({
   name: 'inventory',
   initialState: {
@@ -77,7 +94,6 @@ const inventorySlice = createSlice({
     error: null
   },
   reducers: {
-    // Clear out the single item state when leaving the Detail View
     clearCurrentInventoryItem: (state) => {
       state.currentItem = null;
       state.error = null;
@@ -120,7 +136,7 @@ const inventorySlice = createSlice({
       })
       .addCase(createInventory.fulfilled, (state, action) => {
         state.createStatus = 'succeeded';
-        state.items.unshift(action.payload); // Add new item to the top of the list
+        state.items.unshift(action.payload); // Prepend new item context to list arrays
       })
       .addCase(createInventory.rejected, (state, action) => {
         state.createStatus = 'failed';
@@ -134,11 +150,9 @@ const inventorySlice = createSlice({
       })
       .addCase(updateInventory.fulfilled, (state, action) => {
         state.createStatus = 'succeeded';
-        // Update in the items array
         state.items = state.items.map(item => 
           item._id === action.payload._id ? action.payload : item
         );
-        // If the updated item is currently being viewed, update that too
         if (state.currentItem && state.currentItem._id === action.payload._id) {
           state.currentItem = action.payload;
         }

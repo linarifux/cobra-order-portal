@@ -14,10 +14,10 @@ export default function Login() {
   
   const { status, error, isAuthenticated } = useSelector((state) => state.auth);
 
-  // Redirect if already logged in
+  // FIX: Redirect directly to the division workspace matrix instead of the home route
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/'); // Or wherever your main dashboard is
+      navigate('/divisions'); 
     }
   }, [isAuthenticated, navigate]);
 

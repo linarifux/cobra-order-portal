@@ -8,33 +8,33 @@ import { Search, Plus, ShoppingCart, ChevronRight, Layers, Loader2, AlertCircle 
 export default function Products() {
   const dispatch = useDispatch();
   
-  // Connect to Redux Auth to get the user's logged-in profile context
+  // Connect to Redux state modules
   const { user } = useSelector((state) => state.auth);
   const { items, status, error } = useSelector((state) => state.inventory);
+  const activeDivision = useSelector((state) => state.divisions.activeDivision);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [quantities, setQuantities] = useState({});
 
-  // Safely extract dynamic customer context from the session profile
-  const customerId = user?.customer;
-  const userAllowedDivisions = user?.divisions || [];
+  // Extract the active division ID from the Redux selection context
+  const divisionId = activeDivision?._id || activeDivision;
 
-  // Fetch Inventory reliably on mount whenever the user's customer context is available
+  // Fetch inventory cleanly scoped to the selected working division workspace
   useEffect(() => {
-    if (customerId) {
-      dispatch(fetchInventory(customerId));
+    if (divisionId) {
+      dispatch(fetchInventory(divisionId));
     }
-  }, [dispatch, customerId]);
+  }, [dispatch, divisionId]);
 
-  // Dynamically derive sidebar categories from items matching the user's allowed division access
+  // Dynamically derive sidebar categories from items matching the selected division context
   const dynamicCategories = useMemo(() => {
     const categoryMap = {};
     
     items.forEach(item => {
-      // Access Filtering: Verify if the user has permission for this item's specific division ID
-      const hasDivisionAccess = userAllowedDivisions.includes(item.division?._id || item.division);
-      if (!hasDivisionAccess) return;
+      // Security Check: Verify item matches the currently activated workspace division ID
+      const itemDivisionId = item.division?._id || item.division;
+      if (itemDivisionId !== divisionId) return;
 
       const divisionName = item.division?.divisionName || 'Uncategorized';
       const catName = item.category1?.categoryName || 'General';
@@ -49,14 +49,14 @@ export default function Products() {
       division,
       sub: Array.from(subCats).sort()
     })).sort((a, b) => a.division.localeCompare(b.division));
-  }, [items, userAllowedDivisions]);
+  }, [items, divisionId]);
 
-  // Map the raw MongoDB items to our UI structure following the exact property schema
+  // Map the raw MongoDB items to our UI structure following the exact division-scoped criteria
   const filteredProducts = useMemo(() => {
     const mapped = items
       .filter(item => {
-        // Enforce boundary security check matching user profile division clearances
-        return userAllowedDivisions.includes(item.division?._id || item.division);
+        const itemDivisionId = item.division?._id || item.division;
+        return itemDivisionId === divisionId;
       })
       .map(item => ({
         _id: item._id,
@@ -68,7 +68,6 @@ export default function Products() {
         onOrder: item.pipelineSupply || 0,
         category: item.category1?.categoryName || 'General',
         division: item.division?.divisionName || 'Uncategorized',
-        // Fallbacks assigned together to prevent calculation mismatch across layout items
         price: item.price || 0,
         cost: item.unitCost || item.price || 0,
         unitCost: item.unitCost || item.price || 0
@@ -86,7 +85,7 @@ export default function Products() {
     return finalFiltered.sort((a, b) => 
       a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
     );
-  }, [items, searchQuery, activeCategory, userAllowedDivisions]);
+  }, [items, searchQuery, activeCategory, divisionId]);
 
   const handleQuantityChange = (id, value) => {
     if (value === '' || /^[0-9\b]+$/.test(value)) {
@@ -103,7 +102,7 @@ export default function Products() {
   };
 
   // --- Render Loader States ---
-  if (status === 'loading' || !customerId) {
+  if (status === 'loading' || !divisionId) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
@@ -122,7 +121,7 @@ export default function Products() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
           <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => customerId && dispatch(fetchInventory(customerId))}
+            onClick={() => divisionId && dispatch(fetchInventory(divisionId))}
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
@@ -263,7 +262,7 @@ export default function Products() {
                         <button 
                           onClick={() => handleAdd(product)}
                           disabled={!quantities[product.id] || quantities[product.id] === '0'}
-                          className="flex items-center justify-center h-10 w-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all active:scale-95"
+                          className="flex items-center justify-center h-10 w-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all active:scale-[0.98]"
                         >
                           <Plus className="h-5 w-5" />
                         </button>

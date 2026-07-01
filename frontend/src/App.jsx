@@ -11,10 +11,10 @@ import Address from './pages/Address';
 import Checkout from './pages/Checkout';
 import OrderDetails from './pages/OrderDetails';
 import Login from './pages/Login';
+import Divisions from './pages/Divisions';
 
-// --- Protected Route Wrapper ---
-// Checks the Redux store to see if a valid token exists.
-// If not, it redirects the user immediately to the Login page.
+// --- Auth Protected Route Wrapper ---
+// Validates global session state to authorize portal boundary access.
 const ProtectedRoute = () => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   
@@ -22,7 +22,20 @@ const ProtectedRoute = () => {
     return <Navigate to="/login" replace />;
   }
 
-  return <Outlet />; // Renders the child routes if authenticated
+  return <Outlet />; 
+};
+
+// --- Workspace Division Guard ---
+// Enforces that a localized layout configuration target must exist 
+// before letting users enter the functional application environment.
+const WorkspaceRoute = () => {
+  const activeDivision = localStorage.getItem('dsm_active_division');
+
+  if (!activeDivision) {
+    return <Navigate to="/divisions" replace />;
+  }
+
+  return <Outlet />;
 };
 
 function App() {
@@ -30,21 +43,32 @@ function App() {
     <BrowserRouter>
       <Routes>
         
-        {/* Public Route - Sits outside the MainLayout so it has no Navbar */}
+        {/* Public Authentication Portal */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected Routes - Only accessible if logged in */}
+        {/* Secure Session Boundary */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-            <Route path="products" element={<Products />} />
-            <Route path="products/:id" element={<ProductDetails />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="address" element={<Address />} />
-            <Route path="checkout" element={<Checkout />} />
-            <Route path="orders/:id" element={<OrderDetails />} />
+          
+          {/* Workspace Matrix (Standalone page, clear of broken navigation panels) */}
+          <Route path="/divisions" element={<Divisions />} />
+
+          {/* Division Scoped Operational Boundary */}
+          <Route element={<WorkspaceRoute />}>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Home />} />
+              <Route path="products" element={<Products />} />
+              <Route path="products/:id" element={<ProductDetails />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="address" element={<Address />} />
+              <Route path="checkout" element={<Checkout />} />
+              <Route path="orders/:id" element={<OrderDetails />} />
+            </Route>
           </Route>
+
         </Route>
+
+        {/* Global Catch-all Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
 
       </Routes>
     </BrowserRouter>

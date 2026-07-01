@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByCustomer, createAddress } from '../store/slices/addressSlice';
-import { fetchCarriers } from '../store/slices/carrierSlice'; // <-- Using your unified thunk
+import { fetchCarriers } from '../store/slices/carrierSlice'; 
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
@@ -25,8 +25,9 @@ export default function Checkout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   
-  // Extract user context from Redux globally
+  // Extract user and workspace context from Redux globally
   const { user } = useSelector(state => state.auth);
+  const activeDivision = useSelector(state => state.divisions?.activeDivision); // Safe pull from division slice
   
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
@@ -50,6 +51,10 @@ export default function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Determine the active division ID safely
+  const activeDivisionId = activeDivision?._id || localStorage.getItem('dsm_active_division') || user?.divisions?.[0];
+  const parsedDivisionId = typeof activeDivisionId === 'object' ? activeDivisionId._id : activeDivisionId;
+
   // 1. Fetch Addresses scoped dynamically to the logged-in User's Customer ID
   useEffect(() => {
     if (addressStatus === 'idle' && user?.customer) {
@@ -57,13 +62,12 @@ export default function Checkout() {
     }
   }, [addressStatus, dispatch, user?.customer]);
 
-  // 2. Fetch Carrier Configurations dynamically scoped by the User's primary Division
+  // 2. Fetch Carrier Configurations dynamically scoped by the active Division
   useEffect(() => {
-    if (carrierStatus === 'idle' && user?.divisions?.[0]) {
-      const divisionId = user.divisions[0]._id || user.divisions[0];
-      dispatch(fetchCarriers(divisionId));
+    if (carrierStatus === 'idle' && parsedDivisionId) {
+      dispatch(fetchCarriers(parsedDivisionId));
     }
-  }, [carrierStatus, dispatch, user?.divisions]);
+  }, [carrierStatus, dispatch, parsedDivisionId]);
 
   // 3. Process Carriers matching the nested configuration model array response
   useEffect(() => {
@@ -72,7 +76,6 @@ export default function Checkout() {
       
       if (Array.isArray(carriers)) {
         carriers.forEach(carrier => {
-          // Skip if the carrier registration container itself is disabled
           if (carrier.isActive && carrier.enabledServices) {
             carrier.enabledServices.forEach(service => {
               if (service.isActive) {
@@ -155,6 +158,10 @@ export default function Checkout() {
       setFormError('Please select a shipping method.');
       return;
     }
+    if (!parsedDivisionId) {
+      setFormError('Critical Error: No active division context found for this order.');
+      return;
+    }
 
     setFormError('');
     setIsSubmitting(true);
@@ -189,11 +196,11 @@ export default function Checkout() {
 
       const finalNotes = poNumber ? `PO Number: ${poNumber}\n${orderNotes}` : orderNotes;
 
-      console.log(user)
+      // FIX: Changed "divisions" to "division" to strictly match the backend schema expectation
       const orderPayload = {
         orderNumber,
         customer: user.customer, 
-        divisions: user.divisions || [], 
+        division: parsedDivisionId, // Passes the active Division ID string directly
         items: formattedItems,
         totalAmount: total,
         shippingAddress: {
@@ -248,6 +255,25 @@ export default function Checkout() {
         <div className="flex flex-col items-center gap-4 text-gray-500">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
           <p className="font-bold tracking-tight">Authenticating access context...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartItems.length === 0) {
+    return (
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
+        <div className="flex flex-col items-center justify-center py-16 px-8 rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] max-w-md w-full text-center">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/50 border border-white/60 shadow-sm mb-6">
+            <ShoppingBag className="h-10 w-10 text-gray-400" />
+          </div>
+          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your order queue is empty</h2>
+          <p className="text-gray-500 font-medium mt-2 mb-8">
+            You need to add products to your cart before you can proceed to the checkout.
+          </p>
+          <Link to="/products" className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95">
+            Browse Products
+          </Link>
         </div>
       </div>
     );

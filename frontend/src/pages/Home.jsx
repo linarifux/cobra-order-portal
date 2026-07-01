@@ -6,29 +6,41 @@ import { ArrowUpRight, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2, Sh
 export default function Home() {
   const dispatch = useDispatch();
   
-  // Extract user from Redux auth slice (populated from localStorage 'dsm_user')
+  // Extract user and active division context from Redux
   const { user } = useSelector((state) => state.auth);
-  const { items: orders, status: ordersStatus } = useSelector((state) => state.orders);
+  const activeDivision = useSelector((state) => state.divisions.activeDivision);
+  const { items: orders, status: ordersStatus, error } = useSelector((state) => state.orders);
 
-  // Fetch orders when the dashboard loads, explicitly tied to the user's customer context
+  // Safely extract the active division ID
+  const divisionId = activeDivision?._id || activeDivision;
+
+  // FIX: Fetch fresh orders explicitly scoped to the active division context
   useEffect(() => {
-    if (ordersStatus === 'idle' && user?.customer) {
-      // Assuming your orderSlice can accept the customer ID or division array to filter
-      dispatch(fetchOrders(user.customer));
+    if (divisionId) {
+      dispatch(fetchOrders(divisionId));
     }
-  }, [ordersStatus, dispatch, user?.customer]);
+  }, [dispatch, divisionId]);
 
-  // Dynamically calculate order statistics based on your backend schema statuses
+  // FIX: Client-side isolation to guarantee stats strictly reflect the current workspace
+  const scopedOrders = useMemo(() => {
+    if (!orders) return [];
+    return orders.filter(order => {
+      const orderDivisionId = order.division?._id || order.division;
+      return orderDivisionId === divisionId;
+    });
+  }, [orders, divisionId]);
+
+  // Dynamically calculate order statistics based strictly on scoped items
   const orderStats = useMemo(() => {
-    if (!orders) return { total: 0, pending: 0, synced: 0, errors: 0 };
+    if (!scopedOrders || scopedOrders.length === 0) return { total: 0, pending: 0, synced: 0, errors: 0 };
 
     return {
-      total: orders.length,
-      pending: orders.filter(o => o.status === 'Pending').length,
-      synced: orders.filter(o => ['Processing', 'Ready to Ship', 'Shipped', 'Delivered'].includes(o.status)).length,
-      errors: orders.filter(o => ['Cancelled', 'On Hold'].includes(o.status)).length,
+      total: scopedOrders.length,
+      pending: scopedOrders.filter(o => o.status === 'Pending').length,
+      synced: scopedOrders.filter(o => ['Processing', 'Ready to Ship', 'Shipped', 'Delivered'].includes(o.status)).length,
+      errors: scopedOrders.filter(o => ['Cancelled', 'On Hold'].includes(o.status)).length,
     };
-  }, [orders]);
+  }, [scopedOrders]);
 
   const stats = [
     { 
@@ -133,6 +145,17 @@ export default function Home() {
           </div>
         ))}
       </div>
+
+      {/* Error Fallback Notice */}
+      {ordersStatus === 'failed' && (
+        <div className="rounded-2xl bg-red-50/80 backdrop-blur-md p-4 border border-red-200/50 flex items-start gap-3 shadow-sm animate-in fade-in">
+          <AlertCircle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-red-800">Failed to sync orders</h3>
+            <p className="text-sm font-medium text-red-700 mt-1">{error}</p>
+          </div>
+        </div>
+      )}
 
       {/* Recent Sync Activity Placeholder */}
       <div className="mt-8 rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">

@@ -7,28 +7,36 @@ import { fetchOrders } from '../store/slices/orderSlice';
 export default function Orders() {
   const dispatch = useDispatch();
   
-  // Extract user context from Redux auth slice
+  // Extract user context from Redux auth slice and active division
   const { user } = useSelector(state => state.auth);
+  const activeDivision = useSelector((state) => state.divisions.activeDivision);
   const { items: orders, status, error } = useSelector(state => state.orders);
   
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Safely grab dynamic customer context from session
-  const customerId = user?.customer;
+  // Extract the active division ID from the Redux selection context safely
+  const divisionId = activeDivision?._id || activeDivision;
 
-  // FIX: Fetch fresh orders on every component mount whenever the session context is verified
+  // FIX: Fetch fresh orders on every component mount, explicitly scoped to the active division context
   useEffect(() => {
-    if (customerId) {
-      dispatch(fetchOrders(customerId));
+    // Ensuring we only dispatch if there's a valid division scope preventing cross-tenant leakage
+    if (divisionId) {
+      dispatch(fetchOrders(divisionId));
     }
-  }, [dispatch, customerId]);
+  }, [dispatch, divisionId]);
 
   // Sort and filter orders completely in client-side memo layer
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
 
-    // FIX: Clone and sort array to guarantee most recent transactions appear at the very top
-    const sorted = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Filter array to strictly guarantee that ONLY orders assigned to the ACTIVE DIVISION appear
+    const scopedOrders = orders.filter(order => {
+      const orderDivisionId = order.division?._id || order.division;
+      return orderDivisionId === divisionId;
+    });
+
+    // Clone and sort array to guarantee most recent transactions appear at the very top
+    const sorted = [...scopedOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     return sorted.filter(order => {
       const query = searchQuery.toLowerCase();
@@ -38,7 +46,7 @@ export default function Orders() {
         (order.status || '').toLowerCase().includes(query)
       );
     });
-  }, [orders, searchQuery]);
+  }, [orders, searchQuery, divisionId]);
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -74,7 +82,7 @@ export default function Orders() {
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
           <Loader2 className="h-10 w-10 animate-spin" />
-          <p className="font-bold tracking-tight text-gray-600">Syncing Orders...</p>
+          <p className="font-bold tracking-tight text-gray-600">Syncing Division Orders...</p>
         </div>
       </div>
     );
@@ -88,7 +96,7 @@ export default function Orders() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load orders</h2>
           <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => customerId && dispatch(fetchOrders(customerId))} 
+            onClick={() => divisionId && dispatch(fetchOrders(divisionId))} 
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again

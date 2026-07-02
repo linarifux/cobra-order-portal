@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, clearAuthError } from '../store/slices/authSlice';
+import { setActiveDivision } from '../store/slices/divisionSlice'; // <-- Import to set context
 import { Box, Mail, Lock, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function Login() {
@@ -12,14 +13,21 @@ export default function Login() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   
-  const { status, error, isAuthenticated } = useSelector((state) => state.auth);
+  const { status, error, isAuthenticated, user } = useSelector((state) => state.auth);
 
-  // FIX: Redirect directly to the division workspace matrix instead of the home route
+  // FIX: Dynamic Redirection based on user's division access level
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/divisions'); 
+    if (isAuthenticated && user) {
+      if (user.divisions && user.divisions.length === 1) {
+        // Automatically assign the context if they only have one workspace
+        dispatch(setActiveDivision(user.divisions[0]));
+        navigate('/'); 
+      } else {
+        // Route multi-tenant users to the workspace selection matrix
+        navigate('/divisions'); 
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate, dispatch]);
 
   // Clear errors when user starts typing again
   useEffect(() => {

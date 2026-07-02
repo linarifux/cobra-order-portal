@@ -248,7 +248,7 @@ export default function Navbar() {
                       onClick={handleLogout} 
                       className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors"
                     >
-                      <LogOut className="h-4 w-4" /> Terminate Session
+                      <LogOut className="h-4 w-4" /> Log Out
                     </button>
                   </div>
                 </div>

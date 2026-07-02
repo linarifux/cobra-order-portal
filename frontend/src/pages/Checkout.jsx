@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
-import { fetchAddressesByCustomer, createAddress } from '../store/slices/addressSlice';
+import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; // <-- Updated Import
 import { fetchCarriers } from '../store/slices/carrierSlice'; 
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
@@ -55,12 +55,12 @@ export default function Checkout() {
   const activeDivisionId = activeDivision?._id || localStorage.getItem('dsm_active_division') || user?.divisions?.[0];
   const parsedDivisionId = typeof activeDivisionId === 'object' ? activeDivisionId._id : activeDivisionId;
 
-  // 1. Fetch Addresses scoped dynamically to the logged-in User's Customer ID
+  // 1. Fetch Addresses scoped dynamically to the logged-in User's ID (Aligned with updated schema)
   useEffect(() => {
-    if (addressStatus === 'idle' && user?.customer) {
-      dispatch(fetchAddressesByCustomer(user.customer));
+    if (addressStatus === 'idle' && user?._id) {
+      dispatch(fetchAddressesByUser(user._id));
     }
-  }, [addressStatus, dispatch, user?.customer]);
+  }, [addressStatus, dispatch, user?._id]);
 
   // 2. Fetch Carrier Configurations dynamically scoped by the active Division
   useEffect(() => {
@@ -148,7 +148,7 @@ export default function Checkout() {
 
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (cartItems.length === 0 || !user?.customer) return;
+    if (cartItems.length === 0 || !user?._id) return;
 
     if (!addressForm.firstName || !addressForm.lastName || !addressForm.contactEmail || !addressForm.contactPhone || !addressForm.street1 || !addressForm.city || !addressForm.state || !addressForm.zipCode) {
       setFormError('Please fill in all required shipping fields marked with *');
@@ -172,7 +172,7 @@ export default function Checkout() {
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          customer: user.customer, 
+          user: user._id, // <-- FIX: Assigning to the User model, not Customer model
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -196,11 +196,10 @@ export default function Checkout() {
 
       const finalNotes = poNumber ? `PO Number: ${poNumber}\n${orderNotes}` : orderNotes;
 
-      // FIX: Changed "divisions" to "division" to strictly match the backend schema expectation
       const orderPayload = {
         orderNumber,
-        customer: user.customer, 
-        division: parsedDivisionId, // Passes the active Division ID string directly
+        customer: user.customer, // <-- Orders still link to the overarching customer entity
+        division: parsedDivisionId, 
         items: formattedItems,
         totalAmount: total,
         shippingAddress: {
@@ -249,7 +248,7 @@ export default function Checkout() {
     }
   };
 
-  if (!user?.customer) {
+  if (!user?._id) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
         <div className="flex flex-col items-center gap-4 text-gray-500">

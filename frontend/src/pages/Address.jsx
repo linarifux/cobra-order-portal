@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom'; // <-- Fixed missing import
+import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, Plus, Search, Edit2, Trash2, 
   Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check, Users
 } from 'lucide-react';
 
 import { 
-  fetchAddressesByCustomer, 
+  fetchAddressesByUser, // <-- Updated from fetchAddressesByCustomer
   createAddress, 
   updateAddress, 
   deleteAddress 
@@ -43,15 +43,27 @@ export default function Address() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Safely extract the dynamic Customer ID from the login session
-  const customerId = user?.customer;
+  // Safely extract the dynamic User ID from the login session
+  const userId = user?._id;
 
-  // Fetch addresses reliably on mount whenever the user's customer context is available
+  // Fetch addresses reliably on mount whenever the user's context is available
   useEffect(() => {
-    if (customerId) {
-      dispatch(fetchAddressesByCustomer(customerId));
+    if (userId) {
+      dispatch(fetchAddressesByUser(userId));
     }
-  }, [dispatch, customerId]);
+  }, [dispatch, userId]);
+
+  // Handle Background Scroll Lock for Modal
+  useEffect(() => {
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isModalOpen]);
 
   const filteredAddresses = useMemo(() => {
     if (!addresses) return [];
@@ -97,12 +109,12 @@ export default function Address() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!customerId) return;
+    if (!userId) return;
     setIsSubmitting(true);
 
     const payload = {
       ...formData,
-      customer: customerId 
+      user: userId // <-- FIX: Assigning payload to the user reference per schema update
     };
 
     try {
@@ -129,7 +141,6 @@ export default function Address() {
   };
 
   // --- Loader States ---
-  // FIX: Shows the loading sequence for the duration of the operational dispatch request
   if (status === 'loading') {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
@@ -149,7 +160,7 @@ export default function Address() {
           <h2 className="text-xl font-bold text-gray-900">Failed to load addresses</h2>
           <p className="text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => customerId && dispatch(fetchAddressesByCustomer(customerId))}
+            onClick={() => userId && dispatch(fetchAddressesByUser(userId))}
             className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
@@ -170,7 +181,7 @@ export default function Address() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner shrink-0">
               <Users className="h-5 w-5 text-blue-600" />
             </div>
             Address Book
@@ -218,11 +229,11 @@ export default function Address() {
                 )}
 
                 <div className="flex items-center gap-4 mt-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white text-blue-700 font-extrabold uppercase shadow-inner text-lg">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white text-blue-700 font-extrabold uppercase shadow-inner text-lg shrink-0">
                     {addr.firstName ? addr.firstName.charAt(0) : '?'}
                   </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-gray-900 tracking-tight">{addr.firstName} {addr.lastName}</h3>
+                  <div className="min-w-0 pr-4">
+                    <h3 className="text-base font-extrabold text-gray-900 tracking-tight truncate">{addr.firstName} {addr.lastName}</h3>
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 mt-1">
                       <Tag className="h-3.5 w-3.5" />
                       <span>{addr.addressType}</span>
@@ -268,7 +279,7 @@ export default function Address() {
                   </div>
                 )}
                 {addr.contactEmail && (
-                  <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
+                  <div className="flex items-center gap-3 text-sm font-medium text-gray-600 min-w-0">
                     <Mail className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
                     <span className="truncate" title={addr.contactEmail}>{addr.contactEmail}</span>
                   </div>
@@ -295,101 +306,103 @@ export default function Address() {
 
       {/* Add/Edit Premium Glass Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white/90 backdrop-blur-3xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white/90 backdrop-blur-3xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white/80 w-full max-w-lg max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             
-            <div className="flex-shrink-0 flex items-center justify-between px-8 py-6 border-b border-gray-200/50 bg-white/40">
-              <h2 className="text-xl font-extrabold text-gray-900 tracking-tight">
+            {/* Fixed Header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-8 py-6 border-b border-slate-200/60 bg-white/40">
+              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
                 {editingId ? 'Edit Customer Address' : 'Add New Address'}
               </h2>
               <button 
                 onClick={closeModal}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/50 border border-white text-gray-500 hover:text-gray-900 hover:bg-white shadow-sm transition-all focus:outline-none"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/50 border border-white/60 text-slate-500 hover:text-red-500 hover:bg-red-50 hover:border-red-100 shadow-sm transition-all focus:outline-none"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
+            {/* Scrollable Form Body */}
             <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-8 space-y-5 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-8 space-y-5 custom-scrollbar bg-slate-50/50">
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">First Name <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">First Name <span className="text-red-500">*</span></label>
                     <input required type="text" name="firstName" value={formData.firstName || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Alex" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Last Name <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Last Name <span className="text-red-500">*</span></label>
                     <input required type="text" name="lastName" value={formData.lastName || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Johnson" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact Phone</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Phone</label>
                     <input type="tel" name="contactPhone" value={formData.contactPhone || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="(555) 555-5555" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact Email</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Email</label>
                     <input type="email" name="contactEmail" value={formData.contactEmail || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="alex@example.com" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Street 1 <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 1 <span className="text-red-500">*</span></label>
                     <input required type="text" name="street1" value={formData.street1 || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="1240 Innovation Way" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Street 2 <span className="normal-case tracking-normal font-medium text-gray-400">(Apt, Suite)</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 2 <span className="normal-case tracking-normal font-medium text-slate-400">(Apt, Suite)</span></label>
                     <input type="text" name="street2" value={formData.street2 || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Suite 200" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-5">
                   <div className="col-span-3 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
                     <input required type="text" name="city" value={formData.city || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Boston" />
                   </div>
                   <div className="col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
                     <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="MA" />
                   </div>
                   <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
                     <input required type="text" name="zipCode" value={formData.zipCode || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="02110" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-gray-200/50 pt-5 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-200/60 pt-5 mt-2">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Country</label>
                     <input type="text" name="country" value={formData.country || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="USA" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Address Type</label>
+                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Address Type</label>
                     <select name="addressType" value={formData.addressType} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/50 text-sm font-medium text-gray-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner appearance-none"
+                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner appearance-none cursor-pointer"
                     >
                       <option value="Shipping">Shipping</option>
                       <option value="Billing">Billing</option>
@@ -399,8 +412,8 @@ export default function Address() {
                 </div>
 
                 <div className="pt-3">
-                  <label className="flex items-center gap-3 cursor-pointer group">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-all duration-300 ${formData.isDefault ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/50 border-gray-300 group-hover:border-blue-500 group-hover:bg-white'}`}>
+                  <label className="flex items-center gap-3 cursor-pointer group w-max">
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-all duration-300 ${formData.isDefault ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/80 border-slate-300 group-hover:border-blue-500 group-hover:bg-white'}`}>
                       <input 
                         type="checkbox" 
                         name="isDefault" 
@@ -410,27 +423,27 @@ export default function Address() {
                       />
                       {formData.isDefault && <Check className="h-4 w-4 text-white" />}
                     </div>
-                    <span className="text-sm font-bold text-gray-900 select-none">Set as Default Address</span>
+                    <span className="text-sm font-bold text-slate-900 select-none">Set as Default Address</span>
                   </label>
-                  <p className="text-xs font-medium text-gray-500 mt-1.5 ml-9">This will remove the default status from other addresses.</p>
+                  <p className="text-[11px] font-bold text-slate-500 mt-1.5 ml-9 uppercase tracking-widest">This will remove the default status from other addresses.</p>
                 </div>
 
               </div>
 
               {/* Fixed Footer */}
-              <div className="flex-shrink-0 flex items-center justify-end gap-4 px-8 py-5 border-t border-gray-200/50 bg-white/40">
+              <div className="flex-shrink-0 flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200/60 bg-white/40">
                 <button 
                   type="button" 
                   onClick={closeModal}
                   disabled={isSubmitting}
-                  className="px-6 py-3 text-sm font-bold text-gray-700 bg-white/50 border border-white hover:bg-white rounded-xl transition-all shadow-sm disabled:opacity-50"
+                  className="px-6 py-2.5 text-sm font-bold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm rounded-xl transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingId ? 'Save Changes' : 'Add Address'}

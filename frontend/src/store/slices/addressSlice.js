@@ -10,7 +10,7 @@ const getAuthHeaders = () => {
   };
 };
 
-// Fetch ALL addresses globally
+// Fetch ALL addresses globally (Admin/System Manager level)
 export const fetchAddresses = createAsyncThunk(
   'addresses/fetchAddresses',
   async (_, { rejectWithValue }) => {
@@ -28,17 +28,18 @@ export const fetchAddresses = createAsyncThunk(
   }
 );
 
-// Fetch addresses specifically for one customer (Ideal for the Order Portal Dropdowns)
-export const fetchAddressesByCustomer = createAsyncThunk(
-  'addresses/fetchAddressesByCustomer',
-  async (customerId, { rejectWithValue }) => {
+// Fetch addresses specifically for one User (Aligned with Address Schema 'user' ref)
+export const fetchAddressesByUser = createAsyncThunk(
+  'addresses/fetchAddressesByUser',
+  async (userId, { rejectWithValue }) => {
     try {
-      const response = await fetch(`${API_URL}/customers/${customerId}/addresses`, {
+      // Endpoint updated to query by User ID instead of Customer ID
+      const response = await fetch(`${API_URL}/users/${userId}/addresses`, {
         method: 'GET',
         headers: getAuthHeaders()
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message || 'Failed to fetch customer addresses');
+      if (!response.ok) throw new Error(data.message || 'Failed to fetch user addresses');
       return data.data.addresses; 
     } catch (error) {
       return rejectWithValue(error.message);
@@ -46,6 +47,7 @@ export const fetchAddressesByCustomer = createAsyncThunk(
   }
 );
 
+// Create Address (Ensure the payload passed from UI includes { user: userId })
 export const createAddress = createAsyncThunk(
   'addresses/createAddress',
   async (addressData, { rejectWithValue }) => {
@@ -112,6 +114,7 @@ const addressSlice = createSlice({
     clearAddresses: (state) => {
       state.items = [];
       state.status = 'idle';
+      state.error = null;
     }
   },
   extraReducers: (builder) => {
@@ -121,28 +124,46 @@ const addressSlice = createSlice({
       .addCase(fetchAddresses.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.items = action.payload;
+        state.error = null;
       })
       .addCase(fetchAddresses.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       })
       
-      // Fetch By Customer Handlers (overwrites items list with that customer's address book)
-      .addCase(fetchAddressesByCustomer.pending, (state) => { state.status = 'loading'; })
-      .addCase(fetchAddressesByCustomer.fulfilled, (state, action) => {
+      // Fetch By User Handlers
+      .addCase(fetchAddressesByUser.pending, (state) => { state.status = 'loading'; })
+      .addCase(fetchAddressesByUser.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.items = action.payload;
+        state.error = null;
       })
-      .addCase(fetchAddressesByCustomer.rejected, (state, action) => {
+      .addCase(fetchAddressesByUser.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
       })
       
       // Mutations
       .addCase(createAddress.fulfilled, (state, action) => {
+        // If the new address is set as default, remove the default flag from others
+        if (action.payload.isDefault) {
+          state.items = state.items.map(item => 
+            item.addressType === action.payload.addressType 
+              ? { ...item, isDefault: false } 
+              : item
+          );
+        }
         state.items.unshift(action.payload);
       })
       .addCase(updateAddress.fulfilled, (state, action) => {
+        // If updated to default, remove the default flag from others
+        if (action.payload.isDefault) {
+          state.items = state.items.map(item => 
+            item.addressType === action.payload.addressType && item._id !== action.payload._id
+              ? { ...item, isDefault: false } 
+              : item
+          );
+        }
         const index = state.items.findIndex(item => item._id === action.payload._id);
         if (index !== -1) state.items[index] = action.payload;
       })

@@ -82,6 +82,7 @@ export default function Products() {
       .map(item => ({
         _id: item._id,
         id: item.sku || 'N/A', 
+        image: item.productImage || null,
         desc: item.itemName || 'Unknown Item',
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
@@ -166,21 +167,24 @@ export default function Products() {
   }
 
   return (
-    <div className="relative flex flex-col md:flex-row gap-6 h-[calc(100vh-8rem)] pt-6 animate-in fade-in duration-700">
+    // FIX: Using min-h on mobile so it can naturally stretch, but locking it to fixed h-[calc()] on md screens and above.
+    <div className="relative flex flex-col md:flex-row gap-4 md:gap-6 min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] pt-4 md:pt-6 animate-in fade-in duration-700">
       
       {/* Decorative Orbs */}
       <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
-      <ProductSidebar 
-        dynamicCategories={dynamicCategories}
-        activeCategory={activeCategory}
-        setActiveCategory={setActiveCategory}
-        expandedCategories={expandedCategories}
-        handleCategoryClick={handleCategoryClick}
-      />
+      <div className="w-full md:w-64 flex-shrink-0 max-h-[350px] md:max-h-full">
+        <ProductSidebar 
+          dynamicCategories={dynamicCategories}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          expandedCategories={expandedCategories}
+          handleCategoryClick={handleCategoryClick}
+        />
+      </div>
 
-      <main className="flex-1 flex flex-col min-w-0 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-[2rem] border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] h-full overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 min-h-[500px] bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-[2rem] border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] h-full overflow-hidden">
         <ProductHeader 
           activeCategory={activeCategory}
           productCount={filteredProducts.length}

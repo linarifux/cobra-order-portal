@@ -17,22 +17,34 @@ export default function Navbar() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
+  // FIX: Internal state for bulletproof inline confirmation
+  const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  
   const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
-  // --- Redux State Subscriptions ---
-  const cartItems = useSelector(state => state.cart.items) || [];
-  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
-  const subtotal = cartItems.reduce((total, item) => total + ((item.product.price || item.product.unitCost || 0) * item.quantity), 0);
+  // --- Safe Redux State Subscriptions ---
+  const cartItems = useSelector(state => state.cart?.items) || [];
+  const cartCount = cartItems.reduce((total, item) => total + (item?.quantity || 0), 0);
   
-  const { user } = useSelector(state => state.auth);
-  const { items: allDivisions } = useSelector(state => state.divisions);
+  const getProductPrice = (product) => Number(product?.price || product?.unitCost || product?.cost || 0);
   
-  const activeDivision = useSelector(state => state.divisions.activeDivision);
-  const activeDivId = activeDivision?._id || activeDivision;
-  const displayDivisionName = activeDivision?.divisionName || 'Corporate Hub';
+  const subtotal = cartItems.reduce((total, item) => total + (getProductPrice(item?.product) * (item?.quantity || 0)), 0);
+  
+  const { user } = useSelector(state => state.auth || {});
+  const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
+  
+  const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
+  const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
+  
+  // Resolve the full division object dynamically
+  const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
+    ? activeDivisionRaw 
+    : allDivisions.find(d => d._id === activeDivisionRaw);
+    
+  const displayDivisionName = activeDivObj?.divisionName || 'Corporate Hub';
 
   // --- Gamification Settings ---
   const FREE_SHIPPING_THRESHOLD = 500;
@@ -63,6 +75,7 @@ export default function Navbar() {
     setIsMobileMenuOpen(false);
     setIsCartOpen(false);
     setIsProfileOpen(false);
+    setIsConfirmingClear(false); // Reset confirmation on route change
   }, [location.pathname]);
 
   useEffect(() => {
@@ -76,18 +89,18 @@ export default function Navbar() {
   const availableDivisions = useMemo(() => {
     if (!user?.divisions) return [];
     return user.divisions.map(userDiv => {
-      const id = userDiv._id || userDiv;
-      const fullDetails = (allDivisions || []).find(d => d._id === id);
+      const id = userDiv?._id || userDiv;
+      const fullDetails = allDivisions.find(d => d._id === id);
       return fullDetails || { _id: id, divisionName: `Division ${String(id).slice(-4)}` };
     });
   }, [user, allDivisions]);
 
   const handleSwitchDivision = (div) => {
-    const divId = div._id || div;
+    const divId = div?._id || div;
     if (divId === activeDivId) return; 
     
     dispatch(setActiveDivision(div));
-    window.location.href = '/'; 
+    navigate('/'); 
   };
 
   const handleGoToCheckout = () => {
@@ -103,20 +116,27 @@ export default function Navbar() {
 
   // --- Cart Quick Actions ---
   const handleUpdateQuantity = (item, delta) => {
+    const targetId = item.product?.id || item.product?._id;
+    if (!targetId) return;
+
     if (item.quantity + delta > 0) {
       dispatch(addToCart({ product: item.product, quantity: delta }));
     } else {
-      dispatch(removeFromCart(item.product.id));
+      dispatch(removeFromCart(targetId));
     }
   };
 
+  // FIX: Bulletproof inline confirmation. No external Toaster dependencies.
   const handleClearCart = () => {
-    if (window.confirm("Are you sure you want to empty your order queue?")) {
+    if (isConfirmingClear) {
       dispatch(clearCart());
+      setIsConfirmingClear(false);
+    } else {
+      setIsConfirmingClear(true);
+      // Auto-reset back to normal after 3 seconds if they don't confirm
+      setTimeout(() => setIsConfirmingClear(false), 3000);
     }
   };
-
-  const getProductPrice = (product) => Number(product.price || product.unitCost || 0);
 
   const navLinks = [
     { name: 'Dashboard', path: '/', icon: Home },
@@ -137,23 +157,23 @@ export default function Navbar() {
   return (
     <>
       <nav className="sticky top-0 z-[100] w-full border-b border-white/60 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_4px_30px_rgba(0,0,0,0.04)]">
-        <div className="mx-auto flex h-20 max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
           
           {/* LEFT: Branding & Navigation */}
-          <div className="flex items-center gap-8 xl:gap-12">
-            <Link to="/" className="flex items-center gap-3 group shrink-0">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
-                <Box className="h-6 w-6" strokeWidth={2.5} />
+          <div className="flex items-center gap-6 sm:gap-8 xl:gap-12">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
+                <Box className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-lg font-black text-slate-900 tracking-tight leading-none">Cobra Fulfillment</h1>
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none">Cobra Fulfillment</h1>
+                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1">
                   <Building2 size={10} className="text-brand-gold" /> {displayDivisionName}
                 </p>
               </div>
             </Link>
 
-            <div className="hidden md:flex items-center gap-2 border-l border-slate-200/60 pl-8">
+            <div className="hidden md:flex items-center gap-1 lg:gap-2 border-l border-slate-200/60 pl-6 lg:pl-8">
               {navLinks.map((link) => (
                 <NavLink key={link.name} to={link.path} className={desktopNavClass}>
                   <link.icon className="h-4 w-4" /> 
@@ -164,19 +184,19 @@ export default function Navbar() {
           </div>
 
           {/* RIGHT: Actions & Profile */}
-          <div className="flex items-center gap-3 sm:gap-5 relative">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-5 relative">
             
             {/* Cart Drawer Toggle */}
             <button 
               onClick={() => { setIsCartOpen(!isCartOpen); setIsProfileOpen(false); }}
-              className={`relative flex items-center justify-center h-12 w-12 rounded-2xl border transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold bg-white/50 border-slate-200 text-slate-600 shadow-sm hover:bg-white/80 hover:shadow-md hover:-translate-y-0.5`}
+              className={`relative flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl border transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-gold bg-white/50 border-slate-200 text-slate-600 shadow-sm hover:bg-white/80 hover:shadow-md hover:-translate-y-0.5`}
             >
-              <ShoppingCart className="h-5 w-5" />
+              <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
               <AnimatePresence>
                 {cartCount > 0 && (
                   <motion.span 
                     initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                    className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-lg bg-red-500 text-[10px] font-black text-white shadow-md ring-2 ring-white/80"
+                    className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-lg bg-red-500 text-[9px] sm:text-[10px] font-black text-white shadow-md ring-2 ring-white/80"
                   >
                     {cartCount}
                   </motion.span>
@@ -184,7 +204,7 @@ export default function Navbar() {
               </AnimatePresence>
             </button>
 
-            <div className="hidden sm:block h-10 w-px bg-slate-200/80 rounded-full mx-2"></div>
+            <div className="hidden sm:block h-8 sm:h-10 w-px bg-slate-200/80 rounded-full mx-1 sm:mx-2"></div>
 
             {/* Premium Profile Dropdown */}
             <div className="relative hidden sm:block" ref={dropdownRef}>
@@ -220,8 +240,8 @@ export default function Navbar() {
                       <p className="px-3 pb-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Division Context</p>
                       <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1 pr-1">
                         {availableDivisions.map((div) => {
-                          const divId = div._id || div;
-                          const divName = div.divisionName || `Division ${String(divId).slice(-4)}`;
+                          const divId = div?._id || div;
+                          const divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
                           const isCurrentlySelected = divId === activeDivId;
 
                           return (
@@ -257,17 +277,17 @@ export default function Navbar() {
 
             {/* Mobile Menu Toggle */}
             <button 
-              className="md:hidden flex h-12 w-12 items-center justify-center rounded-2xl bg-white/50 border border-white/60 text-slate-600 shadow-sm hover:bg-white/80 transition-all duration-300"
+              className="md:hidden flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-white/50 border border-white/60 text-slate-600 shadow-sm hover:bg-white/80 transition-all duration-300"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {isMobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
             </button>
           </div>
         </div>
 
-        {/* FIXED: Mobile Navigation Dropdown */}
+        {/* Mobile Navigation Dropdown */}
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-20 left-0 w-full bg-white/95 backdrop-blur-3xl border-b border-slate-200 p-4 shadow-2xl animate-in slide-in-from-top-2 z-[90]">
+          <div className="md:hidden absolute top-16 sm:top-20 left-0 w-full bg-white/95 backdrop-blur-3xl border-b border-slate-200 p-4 shadow-2xl animate-in slide-in-from-top-2 z-[90]">
             <div className="space-y-2 mb-4">
               <p className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Navigation</p>
               {navLinks.map((link) => (
@@ -286,8 +306,8 @@ export default function Navbar() {
               <p className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Workspace Context</p>
               <div className="max-h-48 overflow-y-auto space-y-1 mb-2 custom-scrollbar">
                 {availableDivisions.map((div) => {
-                  const divId = div._id || div;
-                  const divName = div.divisionName || `Division ${String(divId).slice(-4)}`;
+                  const divId = div?._id || div;
+                  const divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
                   const isCurrentlySelected = divId === activeDivId;
 
                   return (
@@ -343,116 +363,148 @@ export default function Navbar() {
             >
               
               {/* Drawer Header */}
-              <div className="flex items-center justify-between px-6 py-6 border-b border-white/50 bg-white/40">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
-                    <ShoppingCart className="h-5 w-5 text-white" />
+              <div className="flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 border-b border-white/50 bg-white/40">
+                <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                  <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
+                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 tracking-tight leading-none">Order Queue</h2>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60">
+                  <div className="min-w-0 pr-2">
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none truncate">Order Queue</h2>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200/60 whitespace-nowrap">
                         {cartCount} {cartCount === 1 ? 'Item' : 'Items'}
                       </span>
+                      
+                      {/* FIX: Inline Confirmation Button */}
                       {cartItems.length > 0 && (
-                        <button onClick={handleClearCart} className="text-[10px] font-bold text-red-500 hover:text-red-600 uppercase tracking-widest transition-colors">
-                          Clear All
+                        <button 
+                          onClick={handleClearCart} 
+                          className={`text-[9px] sm:text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap px-2 py-0.5 rounded-md border ${
+                            isConfirmingClear 
+                              ? 'bg-red-500 text-white border-red-600 shadow-sm animate-pulse' 
+                              : 'text-red-500 hover:text-red-600 border-transparent hover:bg-red-50'
+                          }`}
+                        >
+                          {isConfirmingClear ? 'Confirm Clear?' : 'Clear All'}
                         </button>
                       )}
+
                     </div>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="p-2.5 rounded-2xl bg-white/50 border border-slate-200/60 text-slate-400 hover:bg-red-50 hover:border-red-100 hover:text-red-500 hover:rotate-90 transition-all duration-300"
+                  className="p-2 sm:p-2.5 shrink-0 rounded-xl sm:rounded-2xl bg-white/50 border border-slate-200/60 text-slate-400 hover:bg-red-50 hover:border-red-100 hover:text-red-500 hover:rotate-90 transition-all duration-300"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
               </div>
 
-             
+              {/* Gamified Free Shipping Bar */}
+              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-b border-white/50 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-2 relative z-10">
+                  <Truck className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 ${amountToFreeShipping === 0 ? 'text-emerald-500' : 'text-blue-500'}`} />
+                  <p className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
+                    {amountToFreeShipping === 0 
+                      ? <span className="text-emerald-600 flex items-center gap-1">Unlocked Free VIP Shipping! <Sparkles className="h-3 w-3 shrink-0" /></span> 
+                      : <span>Add <strong className="text-blue-600">${amountToFreeShipping.toFixed(2)}</strong> more for free shipping</span>
+                    }
+                  </p>
+                </div>
+                <div className="h-1.5 sm:h-2 w-full bg-slate-200/80 rounded-full overflow-hidden relative z-10">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${shippingProgress}%` }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                    className={`h-full rounded-full ${amountToFreeShipping === 0 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
+                  />
+                </div>
+              </div>
               
               {/* Dynamic Content Body */}
-              <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar relative">
+              <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-6 custom-scrollbar relative">
                 {cartItems.length === 0 ? (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center opacity-80 p-8">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center opacity-80 p-6 sm:p-8">
                     <motion.div 
                       initial={{ y: 20 }} animate={{ y: 0 }} transition={{ repeat: Infinity, repeatType: "reverse", duration: 2 }}
-                      className="h-28 w-28 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-[2rem] flex items-center justify-center mb-6 shadow-inner border border-white"
+                      className="h-24 w-24 sm:h-28 sm:w-28 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center mb-5 sm:mb-6 shadow-inner border border-white"
                     >
-                      <Package className="h-12 w-12 text-slate-300" />
+                      <Package className="h-10 w-10 sm:h-12 sm:w-12 text-slate-300" />
                     </motion.div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Queue is empty</h3>
-                    <p className="text-sm font-medium text-slate-500 max-w-[240px]">Navigate to the product catalog to start drafting your fulfillment order.</p>
+                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-2">Queue is empty</h3>
+                    <p className="text-xs sm:text-sm font-medium text-slate-500 max-w-[200px] sm:max-w-[240px]">Navigate to the product catalog to start drafting your fulfillment order.</p>
                     <button 
                       onClick={() => { setIsCartOpen(false); navigate('/products'); }} 
-                      className="mt-8 flex items-center gap-2 px-8 py-3.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                      className="mt-6 sm:mt-8 flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
                     >
                       <ShoppingCart className="h-4 w-4" /> Start Browsing
                     </button>
                   </div>
                 ) : (
-                  <ul className="space-y-4">
+                  <ul className="space-y-3 sm:space-y-4">
                     <AnimatePresence mode='popLayout'>
-                      {cartItems.map((item) => (
-                        <motion.li 
-                          layout
-                          initial={{ opacity: 0, scale: 0.95, y: 10 }} 
-                          animate={{ opacity: 1, scale: 1, y: 0 }} 
-                          exit={{ opacity: 0, scale: 0.95, x: 20 }}
-                          transition={{ duration: 0.2 }}
-                          key={item.product.id} 
-                          className="relative flex gap-4 rounded-3xl bg-white/60 border border-white/80 p-4 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden"
-                        >
-                          {/* Subtle Hover Glow */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-colors pointer-events-none" />
-                          
-                          <div className="h-[88px] w-[88px] rounded-2xl bg-gradient-to-tr from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-inner relative z-10">
-                            <Package className="h-8 w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
-                          </div>
-
-                          <div className="flex flex-col min-w-0 flex-1 justify-between relative z-10 py-0.5">
-                            <div>
-                              <h4 className="text-sm font-black text-slate-900 truncate pr-4" title={item.product.desc}>{item.product.desc}</h4>
-                              <p className="text-[10px] font-bold font-mono text-slate-400 truncate mt-0.5">SKU: {item.product.id}</p>
-                            </div>
+                      {cartItems.map((item) => {
+                        const targetId = item?.product?.id || item?.product?._id;
+                        return (
+                          <motion.li 
+                            layout
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+                            animate={{ opacity: 1, scale: 1, y: 0 }} 
+                            exit={{ opacity: 0, scale: 0.95, x: 20 }}
+                            transition={{ duration: 0.2 }}
+                            key={targetId} 
+                            className="relative flex gap-3 sm:gap-4 rounded-2xl sm:rounded-3xl bg-white/60 border border-white/80 p-3 sm:p-4 shadow-sm hover:shadow-md transition-all duration-300 group overflow-hidden"
+                          >
+                            {/* Subtle Hover Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-colors pointer-events-none" />
                             
-                            <div className="flex items-center justify-between mt-2">
-                              <span className="text-sm font-black text-blue-600">
-                                ${(getProductPrice(item.product) * item.quantity).toFixed(2)}
-                              </span>
+                            <div className="h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-inner relative z-10">
+                              <Package className="h-6 w-6 sm:h-8 sm:w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                            </div>
+
+                            <div className="flex flex-col min-w-0 flex-1 justify-between relative z-10 py-0.5">
+                              <div>
+                                <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate pr-6 sm:pr-4" title={item.product?.desc}>{item.product?.desc}</h4>
+                                <p className="text-[9px] sm:text-[10px] font-bold font-mono text-slate-400 truncate mt-0.5">SKU: {targetId}</p>
+                              </div>
                               
-                              {/* Action Pill Controls */}
-                              <div className="flex items-center bg-white border border-slate-200/80 rounded-xl shadow-sm h-8">
-                                <button 
-                                  onClick={() => handleUpdateQuantity(item, -1)}
-                                  className="w-8 h-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-l-xl transition-colors"
-                                >
-                                  <Minus className="h-3 w-3" />
-                                </button>
-                                <span className="w-8 text-center text-xs font-black text-slate-700 select-none">
-                                  {item.quantity}
+                              <div className="flex items-center justify-between mt-2">
+                                <span className="text-xs sm:text-sm font-black text-blue-600 truncate mr-2">
+                                  ${(getProductPrice(item?.product) * (item?.quantity || 0)).toFixed(2)}
                                 </span>
-                                <button 
-                                  onClick={() => handleUpdateQuantity(item, 1)}
-                                  className="w-8 h-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-r-xl transition-colors"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </button>
+                                
+                                {/* Action Pill Controls */}
+                                <div className="flex items-center bg-white border border-slate-200/80 rounded-lg sm:rounded-xl shadow-sm h-7 sm:h-8 shrink-0">
+                                  <button 
+                                    onClick={() => handleUpdateQuantity(item, -1)}
+                                    className="w-7 sm:w-8 h-full flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-l-lg sm:rounded-l-xl transition-colors"
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </button>
+                                  <span className="w-7 sm:w-8 text-center text-[10px] sm:text-xs font-black text-slate-700 select-none">
+                                    {item.quantity}
+                                  </span>
+                                  <button 
+                                    onClick={() => handleUpdateQuantity(item, 1)}
+                                    className="w-7 sm:w-8 h-full flex items-center justify-center text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-r-lg sm:rounded-r-xl transition-colors"
+                                  >
+                                    <Plus className="h-3 w-3" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          {/* Absolute Positioned Quick Trash */}
-                          <button 
-                            onClick={() => dispatch(removeFromCart(item.product.id))}
-                            className="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all z-20"
-                            title="Remove item"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </motion.li>
-                      ))}
+                            {/* Absolute Positioned Quick Trash */}
+                            <button 
+                              onClick={() => dispatch(removeFromCart(targetId))}
+                              className="absolute top-2 right-2 sm:top-3 sm:right-3 p-1 sm:p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-all z-20"
+                              title="Remove item"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            </button>
+                          </motion.li>
+                        );
+                      })}
                     </AnimatePresence>
                   </ul>
                 )}
@@ -460,29 +512,29 @@ export default function Navbar() {
 
               {/* Elevated Footer Summary */}
               {cartItems.length > 0 && (
-                <div className="p-6 bg-white/70 border-t border-white/60 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] relative z-20">
-                  <div className="space-y-3 mb-6">
-                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                <div className="p-4 sm:p-6 bg-white/70 border-t border-white/60 backdrop-blur-xl shadow-[0_-10px_40px_rgba(0,0,0,0.05)] relative z-20">
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                    <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                       <span>Subtotal</span>
                       <span className="text-slate-900">${subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                    <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                       <span>Est. Taxes & Shipping</span>
-                      <span className="text-slate-400 text-xs uppercase tracking-widest flex items-center gap-1">
+                      <span className="text-slate-400 text-[9px] sm:text-xs uppercase tracking-widest flex items-center gap-1">
                         <AlertCircle className="h-3 w-3" /> Calculated Next
                       </span>
                     </div>
-                    <div className="pt-3 border-t border-slate-200/60 flex justify-between items-end">
-                      <span className="text-xs font-black uppercase tracking-widest text-slate-400">Total Due</span>
-                      <span className="text-3xl font-black text-slate-900 tracking-tight leading-none">${subtotal.toFixed(2)}</span>
+                    <div className="pt-2 sm:pt-3 border-t border-slate-200/60 flex justify-between items-end">
+                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-slate-400">Total Due</span>
+                      <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none">${subtotal.toFixed(2)}</span>
                     </div>
                   </div>
 
                   <button 
                     onClick={handleGoToCheckout}
-                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-14 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 active:scale-[0.98] transition-all"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 h-12 sm:h-14 text-xs sm:text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 active:scale-[0.98] transition-all"
                   >
-                    Secure Checkout <ArrowRight className="h-5 w-5" />
+                    Secure Checkout <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                   </button>
                 </div>
               )}

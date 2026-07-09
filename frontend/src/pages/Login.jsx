@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, clearAuthError } from '../store/slices/authSlice';
-import { setActiveDivision } from '../store/slices/divisionSlice'; // <-- Import to set context
+import { setActiveDivision } from '../store/slices/divisionSlice'; 
 import { Box, Mail, Lock, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
 
 export default function Login() {
@@ -20,6 +20,7 @@ export default function Login() {
     if (isAuthenticated && user) {
       if (user.divisions && user.divisions.length === 1) {
         // Automatically assign the context if they only have one workspace
+        
         dispatch(setActiveDivision(user.divisions[0]));
         navigate('/'); 
       } else {

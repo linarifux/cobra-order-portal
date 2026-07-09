@@ -36,6 +36,7 @@ export default function Navbar() {
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
   
+
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
   
@@ -43,7 +44,7 @@ export default function Navbar() {
   const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
     ? activeDivisionRaw 
     : allDivisions.find(d => d._id === activeDivisionRaw);
-    
+
   const displayDivisionName = activeDivObj?.divisionName || 'Corporate Hub';
 
   // --- Gamification Settings ---

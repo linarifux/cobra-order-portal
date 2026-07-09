@@ -28,6 +28,7 @@ export const fetchDivisions = createAsyncThunk(
   }
 );
 
+
 const divisionSlice = createSlice({
   name: 'divisions',
   initialState: {
@@ -38,11 +39,13 @@ const divisionSlice = createSlice({
   },
   reducers: {
     setActiveDivision: (state, action) => {
+      console.log(action.payload);
+      
       const division = action.payload; // Expects an object: { _id: "...", divisionName: "..." }
       if (!division) return;
 
       const id = division._id || division;
-      const name = division.divisionName || 'Active Workspace';
+      const name = division.divisionName || division;
 
       state.activeDivision = { _id: id, divisionName: name };
       

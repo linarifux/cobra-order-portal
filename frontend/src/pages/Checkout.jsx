@@ -11,6 +11,39 @@ import {
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
+// Robust internal component to handle checkout image loading and error fallbacks
+const CheckoutItemImage = ({ src, alt }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-gray-100 to-white">
+        <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-full w-full bg-white flex items-center justify-center">
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-3 w-3 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt || 'Product image'}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+};
+
 const EMPTY_ADDRESS_FORM = {
   firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
 };
@@ -552,8 +585,8 @@ export default function Checkout() {
             <div className="max-h-[250px] sm:max-h-[350px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {cartItems.map((item) => (
                 <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner">
-                    <Package className="h-6 w-6 text-gray-400" />
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl overflow-hidden border border-white/80 bg-white/50 flex flex-shrink-0 items-center justify-center shadow-inner relative z-10">
+                    <CheckoutItemImage src={item.product?.image || item.product?.productImage} alt={item.product?.desc} />
                   </div>
                   <div className="flex flex-col flex-1 justify-center min-w-0">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.product.desc}>

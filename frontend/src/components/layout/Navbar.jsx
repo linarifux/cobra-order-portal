@@ -12,12 +12,45 @@ import {
   Truck
 } from 'lucide-react';
 
+// Robust internal component to handle cart image loading and error fallbacks
+const CartItemImage = ({ src, alt }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-slate-50 to-slate-100">
+        <Package className="h-6 w-6 sm:h-8 sm:w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-full w-full bg-white flex items-center justify-center">
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt || 'Product image'}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+};
+
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  // FIX: Internal state for bulletproof inline confirmation
+  // Internal state for bulletproof inline confirmation
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   
   const dropdownRef = useRef(null);
@@ -39,7 +72,7 @@ export default function Navbar() {
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
   
-  // Resolve the full division object dynamically
+  // Resolve the full division object dynamically in case Redux only stored the string ID
   const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
     ? activeDivisionRaw 
     : allDivisions.find(d => d._id === activeDivisionRaw);
@@ -126,14 +159,13 @@ export default function Navbar() {
     }
   };
 
-  // FIX: Bulletproof inline confirmation. No external Toaster dependencies.
+  // Bulletproof inline confirmation.
   const handleClearCart = () => {
     if (isConfirmingClear) {
       dispatch(clearCart());
       setIsConfirmingClear(false);
     } else {
       setIsConfirmingClear(true);
-      // Auto-reset back to normal after 3 seconds if they don't confirm
       setTimeout(() => setIsConfirmingClear(false), 3000);
     }
   };
@@ -400,26 +432,6 @@ export default function Navbar() {
                 </button>
               </div>
 
-              {/* Gamified Free Shipping Bar */}
-              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-b border-white/50 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2 relative z-10">
-                  <Truck className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 ${amountToFreeShipping === 0 ? 'text-emerald-500' : 'text-blue-500'}`} />
-                  <p className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
-                    {amountToFreeShipping === 0 
-                      ? <span className="text-emerald-600 flex items-center gap-1">Unlocked Free VIP Shipping! <Sparkles className="h-3 w-3 shrink-0" /></span> 
-                      : <span>Add <strong className="text-blue-600">${amountToFreeShipping.toFixed(2)}</strong> more for free shipping</span>
-                    }
-                  </p>
-                </div>
-                <div className="h-1.5 sm:h-2 w-full bg-slate-200/80 rounded-full overflow-hidden relative z-10">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${shippingProgress}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    className={`h-full rounded-full ${amountToFreeShipping === 0 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
-                  />
-                </div>
-              </div>
               
               {/* Dynamic Content Body */}
               <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-6 custom-scrollbar relative">
@@ -458,8 +470,8 @@ export default function Navbar() {
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-colors pointer-events-none" />
                             
-                            <div className="h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-inner relative z-10">
-                              <Package className="h-6 w-6 sm:h-8 sm:w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                            <div className="h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200/60 bg-white/50 flex items-center justify-center shrink-0 shadow-inner relative z-10">
+                              <CartItemImage src={item?.product?.image || item?.product?.productImage} alt={item?.product?.desc} />
                             </div>
 
                             <div className="flex flex-col min-w-0 flex-1 justify-between relative z-10 py-0.5">

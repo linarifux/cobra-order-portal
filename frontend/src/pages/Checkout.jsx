@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
-import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; // <-- Updated Import
+import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; 
 import { fetchCarriers } from '../store/slices/carrierSlice'; 
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
@@ -172,7 +172,7 @@ export default function Checkout() {
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          user: user._id, // <-- FIX: Assigning to the User model, not Customer model
+          user: user._id, // Assigning to the User model, not Customer model
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -198,7 +198,7 @@ export default function Checkout() {
 
       const orderPayload = {
         orderNumber,
-        customer: user.customer, // <-- Orders still link to the overarching customer entity
+        customer: user.customer, // Orders still link to the overarching customer entity
         division: parsedDivisionId, 
         items: formattedItems,
         totalAmount: total,
@@ -250,10 +250,10 @@ export default function Checkout() {
 
   if (!user?._id) {
     return (
-      <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500 px-4">
         <div className="flex flex-col items-center gap-4 text-gray-500">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-          <p className="font-bold tracking-tight">Authenticating access context...</p>
+          <p className="font-bold tracking-tight text-center">Authenticating access context...</p>
         </div>
       </div>
     );
@@ -261,16 +261,16 @@ export default function Checkout() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="flex h-[calc(100vh-10rem)] items-center justify-center animate-in fade-in duration-500">
-        <div className="flex flex-col items-center justify-center py-16 px-8 rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] max-w-md w-full text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/50 border border-white/60 shadow-sm mb-6">
-            <ShoppingBag className="h-10 w-10 text-gray-400" />
+      <div className="flex h-[calc(100vh-10rem)] min-h-[60vh] items-center justify-center animate-in fade-in duration-500 px-4">
+        <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-6 sm:px-8 rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] max-w-md w-full text-center">
+          <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-white/50 border border-white/60 shadow-sm mb-5 sm:mb-6">
+            <ShoppingBag className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
           </div>
-          <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight">Your order queue is empty</h2>
-          <p className="text-gray-500 font-medium mt-2 mb-8">
+          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Your order queue is empty</h2>
+          <p className="text-sm sm:text-base text-gray-500 font-medium mt-2 mb-6 sm:mb-8">
             You need to add products to your cart before you can proceed to the checkout.
           </p>
-          <Link to="/products" className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95">
+          <Link to="/products" className="rounded-xl w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3.5 sm:py-3 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-95">
             Browse Products
           </Link>
         </div>
@@ -278,53 +278,53 @@ export default function Checkout() {
     );
   }
 
-  const premiumInputClass = "w-full h-12 px-4 rounded-xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-inner";
+  const premiumInputClass = "w-full h-12 sm:h-12 px-3 sm:px-4 rounded-xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-inner";
 
   return (
-    <div className="relative max-w-6xl mx-auto space-y-6 animate-in fade-in duration-700">
+    <div className="relative max-w-6xl mx-auto space-y-5 sm:space-y-6 animate-in fade-in duration-700 px-4 xl:px-0 pb-12">
       
       {/* Subtle Background Orbs */}
-      <div className="absolute top-10 left-0 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
-      <div className="absolute top-60 right-0 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute top-10 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute top-60 right-0 w-48 h-48 sm:w-72 sm:h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
-      <div className="flex items-center gap-5 pb-2">
+      <div className="flex items-start sm:items-center gap-3 sm:gap-5 pb-2">
         <button 
           onClick={() => navigate('/products')}
-          className="flex items-center justify-center h-12 w-12 rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
+          className="mt-0.5 sm:mt-0 flex-shrink-0 flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
         </button>
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Secure Checkout</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">Review your order and submit for fulfillment.</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">Secure Checkout</h1>
+          <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5 sm:mt-1">Review your order and submit for fulfillment.</p>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         
         {/* Left Column: Form Details */}
-        <div className="flex-1 space-y-6 lg:space-y-8">
+        <div className="flex-1 space-y-5 sm:space-y-6 lg:space-y-8">
           
           {/* Shipping Section */}
-          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden relative">
-            <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30 z-10">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner">
+          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden relative">
+            <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30 z-10">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner shrink-0">
                 <MapPin className="h-4 w-4 text-blue-600" />
               </div>
-              <h2 className="text-base font-bold text-gray-900 tracking-tight">Shipping Information</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Shipping Information</h2>
             </div>
             
-            <div className="p-6 sm:p-8">
+            <div className="p-5 sm:p-8">
               {formError && (
-                <div className="p-4 bg-red-50/80 backdrop-blur-md border border-red-200/50 text-red-700 text-sm font-medium rounded-2xl mb-8 flex items-start gap-3 shadow-sm">
+                <div className="p-4 bg-red-50/80 backdrop-blur-md border border-red-200/50 text-red-700 text-sm font-medium rounded-xl sm:rounded-2xl mb-6 sm:mb-8 flex items-start gap-3 shadow-sm">
                   <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
                   <span>{formError}</span>
                 </div>
               )}
 
               {/* Address Book Dropdown */}
-              <div className="mb-8 p-5 rounded-2xl bg-white/30 border border-white/50">
-                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
+              <div className="mb-6 sm:mb-8 p-4 sm:p-5 rounded-xl sm:rounded-2xl bg-white/30 border border-white/50">
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
                   Load from Address Book
                 </label>
                 <div className="relative">
@@ -352,65 +352,65 @@ export default function Checkout() {
               </div>
 
               {/* Input Fields */}
-              <div className="space-y-5 animate-in fade-in duration-300">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Company Name</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Company Name</label>
                     <input type="text" name="company" value={addressForm.company} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact First Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact First Name <span className="text-red-500">*</span></label>
                     <input type="text" name="firstName" value={addressForm.firstName} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact Last Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Contact Last Name <span className="text-red-500">*</span></label>
                     <input type="text" name="lastName" value={addressForm.lastName} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Phone Number <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Phone Number <span className="text-red-500">*</span></label>
                     <input type="tel" name="contactPhone" value={addressForm.contactPhone} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Email <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Email <span className="text-red-500">*</span></label>
                     <input type="email" name="contactEmail" value={addressForm.contactEmail} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Address Line 1 <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Address Line 1 <span className="text-red-500">*</span></label>
                     <input type="text" name="street1" value={addressForm.street1} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Address Line 2</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Address Line 2</label>
                     <input type="text" name="street2" value={addressForm.street2} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
                     <input type="text" name="city" value={addressForm.city} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 gap-4 sm:gap-5">
+                  <div className="col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
                     <input type="text" name="state" value={addressForm.state} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
+                  <div className="col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
                     <input type="text" name="zipCode" value={addressForm.zipCode} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <select name="country" value={addressForm.country} onChange={handleInputChange} className={`${premiumInputClass} appearance-none`}>
                         <option value="USA">United States</option>
@@ -427,18 +427,18 @@ export default function Checkout() {
                 </div>
 
                 {!selectedAddressId && (
-                  <div className="pt-6 pb-2">
+                  <div className="pt-4 sm:pt-6 pb-2">
                     <label className="flex items-center gap-3 cursor-pointer group w-max">
-                      <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-all duration-300 ${saveToAddressBook ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/50 border-white/80 group-hover:border-blue-500 group-hover:bg-white'}`}>
+                      <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg border transition-all duration-300 ${saveToAddressBook ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/50 border-white/80 group-hover:border-blue-500 group-hover:bg-white'}`}>
                         <input 
                           type="checkbox" 
                           checked={saveToAddressBook} 
                           onChange={(e) => setSaveToAddressBook(e.target.checked)}
                           className="sr-only"
                         />
-                        {saveToAddressBook && <Check className="h-4 w-4 text-white" />}
+                        {saveToAddressBook && <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
                       </div>
-                      <span className="text-sm font-bold text-gray-900 select-none">Save this address to my book</span>
+                      <span className="text-xs sm:text-sm font-bold text-gray-900 select-none">Save this address to my book</span>
                     </label>
                   </div>
                 )}
@@ -447,15 +447,15 @@ export default function Checkout() {
           </section>
 
           {/* Shipping Method Section */}
-          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-emerald-100 to-teal-100 border border-white shadow-inner">
+          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-emerald-100 to-teal-100 border border-white shadow-inner shrink-0">
                 <Truck className="h-4 w-4 text-emerald-600" />
               </div>
-              <h2 className="text-base font-bold text-gray-900 tracking-tight">Shipping Method</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Shipping Method</h2>
             </div>
-            <div className="p-6 sm:p-8">
-              <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
+            <div className="p-5 sm:p-8">
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
                 Preferred Service <span className="text-red-500">*</span>
               </label>
               
@@ -464,7 +464,7 @@ export default function Checkout() {
                   <Loader2 className="h-4 w-4 animate-spin" /> Fetching available services...
                 </div>
               ) : shippingOptions.length === 0 ? (
-                <div className="text-sm font-medium text-red-600 h-12 px-4 border border-red-200/50 bg-red-50/80 rounded-xl flex items-center shadow-sm">
+                <div className="text-xs sm:text-sm font-medium text-red-600 p-3 sm:p-0 sm:h-12 sm:px-4 border border-red-200/50 bg-red-50/80 rounded-xl flex items-center shadow-sm">
                   No shipping services are available for this division. Please contact support.
                 </div>
               ) : (
@@ -472,7 +472,7 @@ export default function Checkout() {
                   <select
                     value={selectedShippingMethod}
                     onChange={(e) => setSelectedShippingMethod(e.target.value)}
-                    className={`${premiumInputClass} cursor-pointer appearance-none`}
+                    className={`${premiumInputClass} cursor-pointer appearance-none text-xs sm:text-sm`}
                   >
                     <option value="" disabled>Choose a shipping method...</option>
                     {shippingOptions.map(option => (
@@ -490,27 +490,27 @@ export default function Checkout() {
           </section>
 
           {/* Order Details Section */}
-          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div className="border-b border-white/50 px-6 py-5 flex items-center gap-3 bg-white/30">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-100 to-orange-100 border border-white shadow-inner">
+          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-100 to-orange-100 border border-white shadow-inner shrink-0">
                 <FileText className="h-4 w-4 text-amber-600" />
               </div>
-              <h2 className="text-base font-bold text-gray-900 tracking-tight">Order Details</h2>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Order Details</h2>
             </div>
-            <div className="p-6 sm:p-8 space-y-5">
+            <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
                   Order Number <span className="normal-case tracking-normal font-medium text-gray-400">(Auto Generated)</span>
                 </label>
                 <input
                   type="text"
                   value={orderNumber}
                   readOnly
-                  className="w-full h-12 px-4 rounded-xl border border-white/40 bg-white/30 text-gray-500 font-mono text-sm font-bold outline-none cursor-default"
+                  className="w-full h-12 px-4 rounded-xl border border-white/40 bg-white/30 text-gray-500 font-mono text-xs sm:text-sm font-bold outline-none cursor-default"
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
                   PO Number
                 </label>
                 <input
@@ -522,7 +522,7 @@ export default function Checkout() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Order Notes</label>
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Order Notes</label>
                 <textarea
                   rows="3"
                   value={orderNotes}
@@ -537,31 +537,31 @@ export default function Checkout() {
 
         {/* Right Column: Order Summary */}
         <div className="w-full lg:w-[420px] flex-shrink-0">
-          <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sticky top-28 overflow-hidden">
+          <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] lg:sticky lg:top-28 overflow-hidden">
             
             {/* Header */}
-            <div className="p-6 bg-gradient-to-br from-slate-900 to-gray-900 text-white flex items-center justify-between shadow-inner relative overflow-hidden">
+            <div className="p-5 sm:p-6 bg-gradient-to-br from-slate-900 to-gray-900 text-white flex items-center justify-between shadow-inner relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
-              <h2 className="text-lg font-bold tracking-tight relative z-10">Order Summary</h2>
-              <span className="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-md relative z-10 shadow-sm">
+              <h2 className="text-base sm:text-lg font-bold tracking-tight relative z-10">Order Summary</h2>
+              <span className="bg-white/10 border border-white/20 px-2.5 py-1 sm:px-3 sm:py-1 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md relative z-10 shadow-sm">
                 {cartItems.length} Unique Items
               </span>
             </div>
             
             {/* Items List */}
-            <div className="max-h-[350px] overflow-y-auto p-6 space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
+            <div className="max-h-[250px] sm:max-h-[350px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {cartItems.map((item) => (
-                <div key={item.product.id} className="flex gap-4 p-3 rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
-                  <div className="h-14 w-14 rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner">
+                <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
+                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner">
                     <Package className="h-6 w-6 text-gray-400" />
                   </div>
                   <div className="flex flex-col flex-1 justify-center min-w-0">
-                    <h3 className="text-sm font-bold text-gray-900 truncate tracking-tight" title={item.product.desc}>
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.product.desc}>
                       {item.product.desc}
                     </h3>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
-                      <span className="text-sm font-extrabold text-blue-600">
+                    <div className="flex items-center justify-between mt-1.5 sm:mt-2">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
+                      <span className="text-xs sm:text-sm font-extrabold text-blue-600">
                         ${((getProductPrice(item.product) || 0) * item.quantity).toFixed(2)}
                       </span>
                     </div>
@@ -571,7 +571,7 @@ export default function Checkout() {
             </div>
 
             {/* Calculations */}
-            <div className="p-6 space-y-4 text-sm bg-white/40">
+            <div className="p-5 sm:p-6 space-y-3 sm:space-y-4 text-xs sm:text-sm bg-white/40">
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
@@ -584,32 +584,32 @@ export default function Checkout() {
                 <span>Estimated Tax</span>
                 <span className="font-bold text-gray-900">${tax.toFixed(2)}</span>
               </div>
-              <div className="pt-4 mt-2 border-t border-gray-200/60 flex justify-between items-center">
-                <span className="text-base font-extrabold text-gray-900 tracking-tight">Total</span>
-                <span className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm">
+              <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
+                <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total</span>
+                <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
                   ${total.toFixed(2)}
                 </span>
               </div>
             </div>
 
             {/* Submit Action */}
-            <div className="p-6 pt-0 bg-white/40">
+            <div className="p-5 sm:p-6 pt-0 bg-white/40">
               <button 
                 type="button"
                 onClick={handlePlaceOrder}
                 disabled={isSubmitting || carrierStatus === 'loading' || shippingOptions.length === 0}
-                className="w-full flex items-center justify-center gap-2 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm sm:text-base font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
-                  <><Loader2 className="h-5 w-5 animate-spin" /> Processing...</>
+                  <><Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> Processing...</>
                 ) : (
-                  <>Submit Order to COBRA <ArrowRight className="h-5 w-5" /></>
+                  <>Submit Order to COBRA <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" /></>
                 )}
               </button>
               
-              <div className="mt-5 flex items-center justify-center gap-2 text-xs font-bold tracking-tight text-gray-500 uppercase">
-                <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                Secure connection to COBRA fulfillment
+              <div className="mt-4 sm:mt-5 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold tracking-tight text-gray-500 uppercase text-center">
+                <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500 shrink-0" />
+                <span>Secure connection to COBRA fulfillment</span>
               </div>
             </div>
           </div>

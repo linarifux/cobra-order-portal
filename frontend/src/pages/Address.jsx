@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { 
-  fetchAddressesByUser, // <-- Updated from fetchAddressesByCustomer
+  fetchAddressesByUser, 
   createAddress, 
   updateAddress, 
   deleteAddress 
@@ -114,7 +114,7 @@ export default function Address() {
 
     const payload = {
       ...formData,
-      user: userId // <-- FIX: Assigning payload to the user reference per schema update
+      user: userId // Assigning payload to the user reference per schema update
     };
 
     try {
@@ -154,14 +154,14 @@ export default function Address() {
 
   if (status === 'failed') {
     return (
-      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
-        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center px-4">
+        <div className="flex w-full max-w-md flex-col items-center text-center animate-in fade-in p-6 sm:p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-bold text-gray-900">Failed to load addresses</h2>
-          <p className="text-gray-500 mt-2 font-medium">{error}</p>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">Failed to load addresses</h2>
+          <p className="text-sm sm:text-base text-gray-500 mt-2 font-medium">{error}</p>
           <button 
             onClick={() => userId && dispatch(fetchAddressesByUser(userId))}
-            className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
+            className="mt-6 w-full sm:w-auto rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
           </button>
@@ -171,26 +171,26 @@ export default function Address() {
   }
 
   return (
-    <div className="relative space-y-6 animate-in fade-in duration-700">
+    <div className="relative space-y-6 animate-in fade-in duration-700 px-4 lg:px-0">
       
       {/* Subtle Background Decorative Orbs */}
-      <div className="absolute top-10 right-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
-      <div className="absolute bottom-10 left-10 w-72 h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute top-10 right-0 sm:right-10 w-48 h-48 sm:w-72 sm:h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
+      <div className="absolute bottom-10 left-0 sm:left-10 w-48 h-48 sm:w-72 sm:h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner shrink-0">
-              <Users className="h-5 w-5 text-blue-600" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900 flex items-center gap-3">
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white shadow-inner shrink-0">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
             </div>
             Address Book
           </h1>
-          <p className="mt-2 text-sm font-medium text-gray-500 ml-14">Manage shipping destinations for downstream COBRA routing.</p>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage shipping destinations for downstream COBRA routing.</p>
         </div>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-64 group">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
+          <div className="relative w-full sm:flex-1 lg:w-64 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
             <input
               type="text"
@@ -202,66 +202,67 @@ export default function Address() {
           </div>
           <button 
             onClick={() => openModal()}
-            className="inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex-shrink-0"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex-shrink-0"
           >
-            <Plus className="h-5 w-5" /> 
-            <span className="hidden sm:inline">Add Customer</span>
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" /> 
+            <span>Add Customer</span>
           </button>
         </div>
       </div>
 
       {/* Address Grid */}
       {filteredAddresses.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
           {filteredAddresses.map((addr) => (
-            <div key={addr._id} className="relative flex flex-col rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/60 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden group">
+            <div key={addr._id} className="relative flex flex-col rounded-2xl sm:rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/60 hover:-translate-y-1 hover:shadow-[0_12px_40px_rgba(0,0,0,0.08)] transition-all duration-300 overflow-hidden group">
               
               {addr.isDefault && (
                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-400 opacity-10 blur-2xl pointer-events-none transition-opacity group-hover:opacity-20"></div>
               )}
 
               {/* Card Header */}
-              <div className="flex items-start justify-between p-6 border-b border-white/50 bg-white/30 relative z-10">
+              <div className="flex items-start justify-between p-5 sm:p-6 border-b border-white/50 bg-white/30 relative z-10">
                 {addr.isDefault && (
-                  <div className="absolute top-0 right-0 rounded-bl-2xl bg-amber-100/80 backdrop-blur-sm px-4 py-1.5 text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5 border-b border-l border-amber-200/50">
-                    <Star className="h-3 w-3" fill="currentColor" /> Default
+                  <div className="absolute top-0 right-0 rounded-bl-xl sm:rounded-bl-2xl bg-amber-100/80 backdrop-blur-sm px-3 py-1 sm:px-4 sm:py-1.5 text-[9px] sm:text-[10px] font-bold text-amber-700 uppercase tracking-widest flex items-center gap-1.5 border-b border-l border-amber-200/50">
+                    <Star className="h-2.5 w-2.5 sm:h-3 sm:w-3" fill="currentColor" /> Default
                   </div>
                 )}
 
-                <div className="flex items-center gap-4 mt-2">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white text-blue-700 font-extrabold uppercase shadow-inner text-lg shrink-0">
+                <div className="flex items-center gap-3 sm:gap-4 mt-2 min-w-0">
+                  <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-100 to-indigo-100 border border-white text-blue-700 font-extrabold uppercase shadow-inner text-base sm:text-lg shrink-0">
                     {addr.firstName ? addr.firstName.charAt(0) : '?'}
                   </div>
-                  <div className="min-w-0 pr-4">
-                    <h3 className="text-base font-extrabold text-gray-900 tracking-tight truncate">{addr.firstName} {addr.lastName}</h3>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 mt-1">
-                      <Tag className="h-3.5 w-3.5" />
+                  <div className="min-w-0 pr-2 flex-1">
+                    <h3 className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight truncate">{addr.firstName} {addr.lastName}</h3>
+                    <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-gray-500 mt-1">
+                      <Tag className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       <span>{addr.addressType}</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-2">
+                {/* Persistent on Mobile, Hover on Desktop */}
+                <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-2 shrink-0">
                   <button 
                     onClick={() => openModal(addr)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/50 border border-white/60 text-gray-400 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all"
                     title="Edit Address"
                   >
-                    <Edit2 className="h-4 w-4" />
+                    <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
                   <button 
                     onClick={() => handleDelete(addr._id)}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/50 border border-white/60 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 hover:shadow-sm transition-all"
+                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 hover:shadow-sm transition-all"
                     title="Delete Address"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
                 </div>
               </div>
 
               {/* Card Body */}
-              <div className="p-6 relative z-10 flex flex-col flex-1 gap-4">
-                <div className="flex items-start gap-3 text-sm font-medium text-gray-600">
+              <div className="p-5 sm:p-6 relative z-10 flex flex-col flex-1 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600">
                   <MapPin className="h-4 w-4 text-blue-500/70 mt-0.5 flex-shrink-0" />
                   <span className="leading-relaxed">
                     <span className="text-gray-900">{addr.street1}</span>
@@ -269,17 +270,17 @@ export default function Address() {
                     <br />
                     {addr.city}, {addr.state} {addr.zipCode}
                     <br />
-                    <span className="text-gray-400 font-bold uppercase tracking-wider text-xs">{addr.country}</span>
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs">{addr.country}</span>
                   </span>
                 </div>
                 {addr.contactPhone && (
-                  <div className="flex items-center gap-3 text-sm font-medium text-gray-600">
+                  <div className="flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600">
                     <Phone className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
                     <span>{addr.contactPhone}</span>
                   </div>
                 )}
                 {addr.contactEmail && (
-                  <div className="flex items-center gap-3 text-sm font-medium text-gray-600 min-w-0">
+                  <div className="flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600 min-w-0">
                     <Mail className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
                     <span className="truncate" title={addr.contactEmail}>{addr.contactEmail}</span>
                   </div>
@@ -289,15 +290,15 @@ export default function Address() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl py-24 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-          <div className="h-20 w-20 bg-white/50 rounded-full flex items-center justify-center mb-6 shadow-sm border border-white/60">
-            <Map className="h-10 w-10 text-gray-400" />
+        <div className="flex flex-col items-center justify-center rounded-2xl sm:rounded-3xl border border-white/60 bg-white/40 backdrop-blur-2xl py-16 sm:py-24 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="h-16 w-16 sm:h-20 sm:w-20 bg-white/50 rounded-full flex items-center justify-center mb-4 sm:mb-6 shadow-sm border border-white/60">
+            <Map className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">No addresses found</h2>
-          <p className="text-sm font-medium text-gray-500 mt-2 mb-6 text-center">We couldn't find any customers matching your search.</p>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900">No addresses found</h2>
+          <p className="text-xs sm:text-sm font-medium text-gray-500 mt-1 sm:mt-2 mb-4 sm:mb-6 text-center max-w-[250px] sm:max-w-none">We couldn't find any customers matching your search.</p>
           <button 
             onClick={() => setSearchQuery('')}
-            className="text-sm font-bold text-blue-600 hover:text-blue-700 bg-white/50 px-6 py-2.5 rounded-xl border border-white/80 shadow-sm transition-all"
+            className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 bg-white/50 px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-white/80 shadow-sm transition-all"
           >
             Clear Search
           </button>
@@ -306,13 +307,13 @@ export default function Address() {
 
       {/* Add/Edit Premium Glass Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 sm:p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white/90 backdrop-blur-3xl backdrop-saturate-150 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white/80 w-full max-w-lg max-h-full flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 md:p-8 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white/95 backdrop-blur-3xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.2)] border border-white/80 w-full max-w-lg max-h-[95vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
             
             {/* Fixed Header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-8 py-6 border-b border-slate-200/60 bg-white/40">
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                {editingId ? 'Edit Customer Address' : 'Add New Address'}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 sm:px-8 py-4 sm:py-6 border-b border-slate-200/60 bg-white/40">
+              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">
+                {editingId ? 'Edit Address' : 'Add New Address'}
               </h2>
               <button 
                 onClick={closeModal}
@@ -324,85 +325,85 @@ export default function Address() {
 
             {/* Scrollable Form Body */}
             <form onSubmit={handleSave} className="flex flex-col flex-1 overflow-hidden">
-              <div className="flex-1 overflow-y-auto p-8 space-y-5 custom-scrollbar bg-slate-50/50">
+              <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 sm:space-y-5 custom-scrollbar bg-slate-50/50">
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">First Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">First Name <span className="text-red-500">*</span></label>
                     <input required type="text" name="firstName" value={formData.firstName || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Alex" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Last Name <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Last Name <span className="text-red-500">*</span></label>
                     <input required type="text" name="lastName" value={formData.lastName || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Johnson" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Phone</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Phone</label>
                     <input type="tel" name="contactPhone" value={formData.contactPhone || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="(555) 555-5555" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Email</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Email</label>
                     <input type="email" name="contactEmail" value={formData.contactEmail || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="alex@example.com" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 1 <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 1 <span className="text-red-500">*</span></label>
                     <input required type="text" name="street1" value={formData.street1 || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="1240 Innovation Way" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 2 <span className="normal-case tracking-normal font-medium text-slate-400">(Apt, Suite)</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Street 2 <span className="normal-case tracking-normal font-medium text-slate-400">(Apt, Suite)</span></label>
                     <input type="text" name="street2" value={formData.street2 || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Suite 200" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-5">
-                  <div className="col-span-3 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">City <span className="text-red-500">*</span></label>
                     <input required type="text" name="city" value={formData.city || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Boston" />
                   </div>
                   <div className="col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
                     <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="MA" />
                   </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
+                  <div className="col-span-1 sm:col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">ZIP <span className="text-red-500">*</span></label>
                     <input required type="text" name="zipCode" value={formData.zipCode || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="02110" />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 border-t border-slate-200/60 pt-5 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 border-t border-slate-200/60 pt-4 sm:pt-5 mt-2">
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Country</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Country</label>
                     <input type="text" name="country" value={formData.country || ''} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="USA" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Address Type</label>
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Address Type</label>
                     <select name="addressType" value={formData.addressType} onChange={handleInputChange}
-                      className="w-full h-12 px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner appearance-none cursor-pointer"
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner appearance-none cursor-pointer"
                     >
                       <option value="Shipping">Shipping</option>
                       <option value="Billing">Billing</option>
@@ -411,9 +412,9 @@ export default function Address() {
                   </div>
                 </div>
 
-                <div className="pt-3">
+                <div className="pt-2 sm:pt-3">
                   <label className="flex items-center gap-3 cursor-pointer group w-max">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg border transition-all duration-300 ${formData.isDefault ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/80 border-slate-300 group-hover:border-blue-500 group-hover:bg-white'}`}>
+                    <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg border transition-all duration-300 ${formData.isDefault ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/80 border-slate-300 group-hover:border-blue-500 group-hover:bg-white'}`}>
                       <input 
                         type="checkbox" 
                         name="isDefault" 
@@ -421,29 +422,29 @@ export default function Address() {
                         onChange={handleInputChange}
                         className="sr-only"
                       />
-                      {formData.isDefault && <Check className="h-4 w-4 text-white" />}
+                      {formData.isDefault && <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
                     </div>
-                    <span className="text-sm font-bold text-slate-900 select-none">Set as Default Address</span>
+                    <span className="text-xs sm:text-sm font-bold text-slate-900 select-none">Set as Default</span>
                   </label>
-                  <p className="text-[11px] font-bold text-slate-500 mt-1.5 ml-9 uppercase tracking-widest">This will remove the default status from other addresses.</p>
+                  <p className="text-[10px] sm:text-[11px] font-bold text-slate-500 mt-1.5 ml-8 sm:ml-9 uppercase tracking-widest leading-tight">This removes default status from others.</p>
                 </div>
 
               </div>
 
               {/* Fixed Footer */}
-              <div className="flex-shrink-0 flex items-center justify-end gap-3 px-8 py-5 border-t border-slate-200/60 bg-white/40">
+              <div className="flex-shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 px-5 sm:px-8 py-4 sm:py-5 border-t border-slate-200/60 bg-white/40">
                 <button 
                   type="button" 
                   onClick={closeModal}
                   disabled={isSubmitting}
-                  className="px-6 py-2.5 text-sm font-bold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm rounded-xl transition-all disabled:opacity-50"
+                  className="w-full sm:w-auto px-6 py-3 sm:py-2.5 text-sm font-bold text-slate-600 bg-white/50 border border-slate-200 hover:bg-white hover:border-slate-300 hover:shadow-sm rounded-xl transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 sm:py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   {editingId ? 'Save Changes' : 'Add Address'}

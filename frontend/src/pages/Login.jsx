@@ -15,17 +15,19 @@ export default function Login() {
   
   const { status, error, isAuthenticated, user } = useSelector((state) => state.auth);
 
-  // FIX: Dynamic Redirection based on user's division access level
+  // Dynamic Redirection based on user's division access level
   useEffect(() => {
     if (isAuthenticated && user) {
       if (user.divisions && user.divisions.length === 1) {
         // Automatically assign the context if they only have one workspace
-        
         dispatch(setActiveDivision(user.divisions[0]));
         navigate('/'); 
-      } else {
+      } else if (user.divisions && user.divisions.length > 1) {
         // Route multi-tenant users to the workspace selection matrix
         navigate('/divisions'); 
+      } else {
+        // Fallback safety route
+        navigate('/');
       }
     }
   }, [isAuthenticated, user, navigate, dispatch]);

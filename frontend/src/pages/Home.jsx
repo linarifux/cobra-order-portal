@@ -52,22 +52,6 @@ export default function Home() {
       trend: '+12.5%'
     },
     { 
-      name: 'Pending Sync', 
-      value: orderStats.pending.toLocaleString(), 
-      icon: Clock, 
-      gradient: 'from-amber-400 to-orange-500',
-      shadow: 'shadow-amber-500/30',
-      trend: '-2.4%'
-    },
-    { 
-      name: 'Synced to COBRA', 
-      value: orderStats.synced.toLocaleString(), 
-      icon: CheckCircle2, 
-      gradient: 'from-emerald-400 to-teal-500',
-      shadow: 'shadow-emerald-500/30',
-      trend: '+18.2%'
-    },
-    { 
       name: 'Requires Attention', 
       value: orderStats.errors.toLocaleString(), 
       icon: AlertCircle, 

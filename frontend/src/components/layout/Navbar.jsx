@@ -5,6 +5,7 @@ import { removeFromCart, syncCartDivision, addToCart, clearCart } from '../../st
 import { logoutUser } from '../../store/slices/authSlice';
 import { setActiveDivision, fetchDivisions } from '../../store/slices/divisionSlice';
 import { AnimatePresence, motion } from 'framer-motion'; 
+import { toast } from 'sonner';
 import { 
   Box, Home, Package, ClipboardList, MapPin, 
   UserCircle, LogOut, Menu, X, ShoppingCart, Trash2, ArrowRight,
@@ -12,12 +13,45 @@ import {
   Truck
 } from 'lucide-react';
 
+// Robust internal component to handle cart image loading and error fallbacks
+const CartItemImage = ({ src, alt }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-slate-50 to-slate-100">
+        <Package className="h-6 w-6 sm:h-8 sm:w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative h-full w-full bg-white flex items-center justify-center">
+      {!isLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-600 border-t-transparent"></div>
+        </div>
+      )}
+      <img
+        src={src}
+        alt={alt || 'Product image'}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${
+          isLoaded ? 'opacity-100' : 'opacity-0'
+        }`}
+      />
+    </div>
+  );
+};
+
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   
-  // FIX: Internal state for bulletproof inline confirmation
+  // Internal state for bulletproof inline confirmation
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
   
   const dropdownRef = useRef(null);
@@ -30,22 +64,29 @@ export default function Navbar() {
   const cartCount = cartItems.reduce((total, item) => total + (item?.quantity || 0), 0);
   
   const getProductPrice = (product) => Number(product?.price || product?.unitCost || product?.cost || 0);
-  
   const subtotal = cartItems.reduce((total, item) => total + (getProductPrice(item?.product) * (item?.quantity || 0)), 0);
   
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
   
-
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
   
+  // FIX: Safely Auto-select division inside a useEffect (Prevents Infinite Re-render Crash)
+  useEffect(() => {
+    if (user?.divisions?.length === 1 && !activeDivId) {
+      dispatch(setActiveDivision(user.divisions[0]));
+    }
+  }, [user?.divisions, activeDivId, dispatch]);
+
   // Resolve the full division object dynamically
   const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
     ? activeDivisionRaw 
     : allDivisions.find(d => d._id === activeDivisionRaw);
-
-  const displayDivisionName = activeDivObj?.divisionName || 'Corporate Hub';
+    
+  // Dynamic Branding Variables
+  const displayCustomerName = user?.customer?.customerName || user?.customerName || 'DSM';
+  const displayDivisionName = activeDivObj?.divisionName || null; // Only shows if truthy
 
   // --- Gamification Settings ---
   const FREE_SHIPPING_THRESHOLD = 500;
@@ -127,14 +168,14 @@ export default function Navbar() {
     }
   };
 
-  // FIX: Bulletproof inline confirmation. No external Toaster dependencies.
+  // Bulletproof inline confirmation.
   const handleClearCart = () => {
     if (isConfirmingClear) {
       dispatch(clearCart());
       setIsConfirmingClear(false);
+      setIsCartOpen(false); // Close drawer automatically after clearing
     } else {
       setIsConfirmingClear(true);
-      // Auto-reset back to normal after 3 seconds if they don't confirm
       setTimeout(() => setIsConfirmingClear(false), 3000);
     }
   };
@@ -161,16 +202,20 @@ export default function Navbar() {
         <div className="mx-auto flex h-16 sm:h-20 max-w-[1600px] items-center justify-between px-4 sm:px-6 lg:px-8">
           
           {/* LEFT: Branding & Navigation */}
-          <div className="flex items-center gap-6 sm:gap-8 xl:gap-12">
-            <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0">
-              <div className="flex h-9 w-9 sm:h-11 sm:w-11 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
+          <div className="flex items-center gap-6 sm:gap-8 xl:gap-12 min-w-0">
+            <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0 min-w-0">
+              <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
                 <Box className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
-              <div className="hidden sm:block">
-                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none">Cobra Fulfillment</h1>
-                <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1">
-                  <Building2 size={10} className="text-brand-gold" /> {displayDivisionName}
-                </p>
+              <div className="hidden sm:flex flex-col min-w-0">
+                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate max-w-[200px] lg:max-w-[250px]" title={displayCustomerName}>
+                  {displayCustomerName}
+                </h1>
+                {displayDivisionName && (
+                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1 truncate max-w-[200px] lg:max-w-[250px]" title={displayDivisionName}>
+                    <Building2 size={10} className="text-brand-gold shrink-0" /> <span className="truncate">{displayDivisionName}</span>
+                  </p>
+                )}
               </div>
             </Link>
 
@@ -185,7 +230,7 @@ export default function Navbar() {
           </div>
 
           {/* RIGHT: Actions & Profile */}
-          <div className="flex items-center gap-2 sm:gap-3 md:gap-5 relative">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-5 relative shrink-0">
             
             {/* Cart Drawer Toggle */}
             <button 
@@ -367,7 +412,7 @@ export default function Navbar() {
               <div className="flex items-center justify-between px-4 py-4 sm:px-6 sm:py-6 border-b border-white/50 bg-white/40">
                 <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                   <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-lg shadow-blue-500/30">
-                    <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                    <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <div className="min-w-0 pr-2">
                     <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-none truncate">Order Queue</h2>
@@ -376,7 +421,7 @@ export default function Navbar() {
                         {cartCount} {cartCount === 1 ? 'Item' : 'Items'}
                       </span>
                       
-                      {/* FIX: Inline Confirmation Button */}
+                      {/* Inline Confirmation Button */}
                       {cartItems.length > 0 && (
                         <button 
                           onClick={handleClearCart} 
@@ -459,8 +504,8 @@ export default function Navbar() {
                             {/* Subtle Hover Glow */}
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/5 transition-colors pointer-events-none" />
                             
-                            <div className="h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl sm:rounded-2xl bg-gradient-to-tr from-slate-50 to-slate-100 border border-slate-200/60 flex items-center justify-center shrink-0 shadow-inner relative z-10">
-                              <Package className="h-6 w-6 sm:h-8 sm:w-8 text-slate-300 group-hover:text-blue-400 transition-colors" />
+                            <div className="h-16 w-16 sm:h-[88px] sm:w-[88px] rounded-xl sm:rounded-2xl overflow-hidden border border-slate-200/60 bg-white/50 flex items-center justify-center shrink-0 shadow-inner relative z-10">
+                              <CartItemImage src={item?.product?.image || item?.product?.productImage} alt={item?.product?.desc} />
                             </div>
 
                             <div className="flex flex-col min-w-0 flex-1 justify-between relative z-10 py-0.5">

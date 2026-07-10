@@ -5,8 +5,17 @@ import api from '../../utils/api'; // Utilizing your authorized Axios instance
 const getStoredActiveDivision = () => {
   try {
     const id = localStorage.getItem('dsm_active_division');
-    const name = localStorage.getItem('dsm_active_division_name') || 'Workspace';
-    return id ? { _id: id, divisionName: name } : null;
+    const name = localStorage.getItem('dsm_active_division_name');
+    
+    if (!id) return null;
+
+    // FIX: Only return an object if we actually have a valid name.
+    // Otherwise, return just the string ID so the Navbar knows it needs to map the real name.
+    if (name && name !== id && name !== 'Workspace') {
+      return { _id: id, divisionName: name };
+    }
+    
+    return id;
   } catch {
     return null;
   }
@@ -28,7 +37,6 @@ export const fetchDivisions = createAsyncThunk(
   }
 );
 
-
 const divisionSlice = createSlice({
   name: 'divisions',
   initialState: {
@@ -39,19 +47,25 @@ const divisionSlice = createSlice({
   },
   reducers: {
     setActiveDivision: (state, action) => {
-      console.log(action.payload);
-      
-      const division = action.payload; // Expects an object: { _id: "...", divisionName: "..." }
-      if (!division) return;
+      const payload = action.payload;
+      if (!payload) return;
 
-      const id = division._id || division;
-      const name = division.divisionName || division;
+      const isObj = typeof payload === 'object' && payload !== null;
+      const id = isObj ? payload._id : payload;
+      const name = isObj ? payload.divisionName : null;
 
-      state.activeDivision = { _id: id, divisionName: name };
-      
-      // Keep persistent parameters matching the state
-      localStorage.setItem('dsm_active_division', id);
-      localStorage.setItem('dsm_active_division_name', name);
+      // FIX: Strictly prevent saving IDs as Names.
+      if (name && name !== id) {
+        state.activeDivision = { _id: id, divisionName: name };
+        localStorage.setItem('dsm_active_division', id);
+        localStorage.setItem('dsm_active_division_name', name);
+      } else {
+        // Only ID is known (e.g., during auto-login routing). 
+        // Store just the string. It will be mapped later.
+        state.activeDivision = id;
+        localStorage.setItem('dsm_active_division', id);
+        localStorage.removeItem('dsm_active_division_name'); // Clear poisoned cache
+      }
     },
     clearDivisionContext: (state) => {
       state.items = [];
@@ -71,6 +85,16 @@ const divisionSlice = createSlice({
       .addCase(fetchDivisions.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.items = action.payload;
+
+        // AUTO-HEAL: If the active division is currently just a string ID (because the user 
+        // bypassed the matrix), automatically map and inject the real name from the API payload.
+        if (typeof state.activeDivision === 'string') {
+          const matched = action.payload.find(d => d._id === state.activeDivision);
+          if (matched) {
+            state.activeDivision = { _id: matched._id, divisionName: matched.divisionName };
+            localStorage.setItem('dsm_active_division_name', matched.divisionName);
+          }
+        }
       })
       .addCase(fetchDivisions.rejected, (state, action) => {
         state.status = 'failed';

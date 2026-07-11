@@ -8,6 +8,22 @@ import {
   CheckCircle2, Mail, Phone, Clock
 } from 'lucide-react';
 
+// Utility to generate dynamic tracking links based on carrier name
+const getTrackingUrl = (carrier, trackingNumber) => {
+  if (!trackingNumber) return '#';
+  const c = carrier?.toLowerCase() || '';
+  const encodedTracking = encodeURIComponent(trackingNumber);
+
+  if (c.includes('ups')) return `https://www.ups.com/track?tracknum=${encodedTracking}`;
+  if (c.includes('fedex')) return `https://www.fedex.com/fedextrack/?trknbr=${encodedTracking}`;
+  if (c.includes('usps') || c.includes('postal')) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodedTracking}`;
+  if (c.includes('dhl')) return `https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id=${encodedTracking}`;
+  if (c.includes('canada post')) return `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${encodedTracking}`;
+  
+  // Fallback to Google if carrier is unknown/custom
+  return `https://www.google.com/search?q=${encodeURIComponent(`${carrier || ''} tracking ${trackingNumber}`)}`;
+};
+
 export default function OrderDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -229,7 +245,7 @@ export default function OrderDetails() {
                     <div>
                       <p className="text-gray-400 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-1.5">Tracking Link</p>
                       <a 
-                        href={`https://www.google.com/search?q=${ship.trackingNumber}+tracking`}
+                        href={getTrackingUrl(ship.carrierType, ship.trackingNumber)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 text-xs sm:text-sm font-mono text-blue-600 font-bold bg-white/50 border border-white/80 px-4 py-2.5 rounded-xl shadow-sm cursor-pointer hover:bg-white hover:text-blue-700 hover:shadow transition-all break-all max-w-full group/link"

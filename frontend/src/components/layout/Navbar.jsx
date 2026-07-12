@@ -10,7 +10,7 @@ import {
   Box, Home, Package, ClipboardList, MapPin, 
   UserCircle, LogOut, Menu, X, ShoppingCart, Trash2, ArrowRight,
   Building2, Check, ChevronDown, Plus, Minus, Sparkles, AlertCircle,
-  Truck
+  Truck, Weight
 } from 'lucide-react';
 
 // Robust internal component to handle cart image loading and error fallbacks
@@ -63,8 +63,16 @@ export default function Navbar() {
   const cartItems = useSelector(state => state.cart?.items) || [];
   const cartCount = cartItems.reduce((total, item) => total + (item?.quantity || 0), 0);
   
+  // Calculations
   const getProductPrice = (product) => Number(product?.price || product?.unitCost || product?.cost || 0);
   const subtotal = cartItems.reduce((total, item) => total + (getProductPrice(item?.product) * (item?.quantity || 0)), 0);
+  
+  // Weight Calculations
+  const totalWeightInOunces = cartItems.reduce((acc, item) => {
+    const itemOunces = Number(item.product?.weight) || 0;
+    return acc + (itemOunces * item.quantity);
+  }, 0);
+  const totalWeightInLbs = (totalWeightInOunces / 16).toFixed(2);
   
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
@@ -511,7 +519,9 @@ export default function Navbar() {
                             <div className="flex flex-col min-w-0 flex-1 justify-between relative z-10 py-0.5">
                               <div>
                                 <h4 className="text-xs sm:text-sm font-black text-slate-900 truncate pr-6 sm:pr-4" title={item.product?.desc}>{item.product?.desc}</h4>
-                                <p className="text-[9px] sm:text-[10px] font-bold font-mono text-slate-400 truncate mt-0.5">SKU: {targetId}</p>
+                                <p className="text-[9px] sm:text-[10px] font-bold font-mono text-slate-400 truncate mt-0.5 flex items-center gap-1">
+                                  SKU: {targetId} <span className="text-slate-300">•</span> <Weight size={10} /> {(Number(item.product?.weight) || 0)} oz/ea
+                                </p>
                               </div>
                               
                               <div className="flex items-center justify-between mt-2">
@@ -563,6 +573,10 @@ export default function Navbar() {
                     <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                       <span>Subtotal</span>
                       <span className="text-slate-900">${subtotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
+                      <span className="flex items-center gap-1.5"><Weight size={14} /> Est. Total Weight</span>
+                      <span className="text-slate-900">{totalWeightInLbs} lbs</span>
                     </div>
                     <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                       <span>Est. Taxes & Shipping</span>

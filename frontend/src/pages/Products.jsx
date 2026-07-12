@@ -81,13 +81,14 @@ export default function Products() {
       })
       .map(item => ({
         _id: item._id,
-        id: item.sku || 'N/A', 
+        id: item.sku || item.productCode || 'N/A', 
         image: item.productImage || null,
-        desc: item.itemName || 'Unknown Item',
+        desc: item.itemName || item.description || 'Unknown Item',
+        weight: item.weight || 0, // <-- Properly mapped to the DB weight field
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
-        available: item.unitsOnHand || 0,
-        onOrder: item.pipelineSupply || 0,
+        available: item.available || item.unitsOnHand || 0,
+        onOrder: item.pipelineSupply || item.openOrders || 0,
         cat1: item.category1?.categoryName || 'General',
         cat2: item.category2?.categoryName,
         cat3: item.category3?.categoryName,
@@ -95,7 +96,7 @@ export default function Products() {
         price: item.price || 0,
         cost: item.unitCost || item.price || 0
       }));
-
+      
     const finalFiltered = mapped.filter(product => {
       const matchesSearch = 
         product.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -167,7 +168,6 @@ export default function Products() {
   }
 
   return (
-    // FIX: Using min-h on mobile so it can naturally stretch, but locking it to fixed h-[calc()] on md screens and above.
     <div className="relative flex flex-col md:flex-row gap-4 md:gap-6 min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] pt-4 md:pt-6 animate-in fade-in duration-700">
       
       {/* Decorative Orbs */}

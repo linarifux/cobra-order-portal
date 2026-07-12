@@ -5,7 +5,8 @@ import { addToCart } from '../store/slices/cartSlice';
 import { fetchInventory } from '../store/slices/inventorySlice';
 import { 
   ArrowLeft, Package, ShoppingCart, Activity, 
-  AlertCircle, CheckCircle2, Layers, MapPin, DollarSign, ActivitySquare, Loader2
+  AlertCircle, CheckCircle2, Layers, MapPin, DollarSign, ActivitySquare, Loader2,
+  Weight
 } from 'lucide-react';
 
 export default function ProductDetails() {
@@ -68,12 +69,12 @@ export default function ProductDetails() {
     max: rawProduct.max || '-', 
     onOrder: rawProduct.pipelineSupply || 0,
     category: rawProduct.category1?.categoryName || 'General',
-    location: rawProduct.locationCoordinates || 'Unassigned',
     price: rawProduct.price || 0,
     cost: rawProduct.unitCost || rawProduct.price || 0,
     unitCost: rawProduct.unitCost || rawProduct.price || 0,
     valuation: rawProduct.totalValuation || 0,
-    status: rawProduct.status || 'Unknown'
+    status: rawProduct.status || 'Unknown',
+    weight: rawProduct.weight || 0
   } : null;
 
   const handleQuantityChange = (e) => {
@@ -157,9 +158,9 @@ export default function ProductDetails() {
 
           <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-5 sm:p-6 space-y-4 sm:space-y-5">
             <div className="flex justify-between items-center text-sm">
-              <span className="flex items-center gap-2 text-gray-500 font-semibold"><MapPin className="h-4 w-4"/> Location</span>
+              <span className="flex items-center gap-2 text-gray-500 font-semibold"><Weight className="h-4 w-4"/> Weight</span>
               <span className="font-mono font-bold text-gray-900 bg-white/50 px-2 py-1 rounded border border-white/60 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none text-right">
-                {product.location}
+                {product.weight} oz
               </span>
             </div>
             <div className="flex justify-between items-center text-sm">

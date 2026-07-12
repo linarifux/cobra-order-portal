@@ -6,7 +6,7 @@ import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlic
 import { fetchCarriers } from '../store/slices/carrierSlice'; 
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
-  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
+  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Calculator, Weight
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
@@ -45,7 +45,7 @@ const CheckoutItemImage = ({ src, alt }) => {
 };
 
 const EMPTY_ADDRESS_FORM = {
-  firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
+  firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'US', contactPhone: '', contactEmail: ''
 };
 
 const generateOrderNumber = () => {
@@ -60,7 +60,7 @@ export default function Checkout() {
   
   // Extract user and workspace context from Redux globally
   const { user } = useSelector(state => state.auth);
-  const activeDivision = useSelector(state => state.divisions?.activeDivision); // Safe pull from division slice
+  const activeDivision = useSelector(state => state.divisions?.activeDivision); 
   
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
@@ -72,9 +72,11 @@ export default function Checkout() {
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
   const [saveToAddressBook, setSaveToAddressBook] = useState(false);
   
-  // Shipping Method State
+  // Shipping Method & Rate State
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('');
+  const [shippingCost, setShippingCost] = useState(0);
+  const [isFetchingRates, setIsFetchingRates] = useState(false);
 
   // Order Details
   const [orderNumber] = useState(generateOrderNumber());
@@ -88,7 +90,7 @@ export default function Checkout() {
   const activeDivisionId = activeDivision?._id || localStorage.getItem('dsm_active_division') || user?.divisions?.[0];
   const parsedDivisionId = typeof activeDivisionId === 'object' ? activeDivisionId._id : activeDivisionId;
 
-  // 1. Fetch Addresses scoped dynamically to the logged-in User's ID (Aligned with updated schema)
+  // 1. Fetch Addresses scoped dynamically to the logged-in User's ID
   useEffect(() => {
     if (addressStatus === 'idle' && user?._id) {
       dispatch(fetchAddressesByUser(user._id));
@@ -102,58 +104,26 @@ export default function Checkout() {
     }
   }, [carrierStatus, dispatch, parsedDivisionId]);
 
-  // 3. Process Carriers matching the nested configuration model array response
-  useEffect(() => {
-    if (carrierStatus === 'succeeded' && carriers) {
-      const flattenedOptions = [];
-      
-      if (Array.isArray(carriers)) {
-        carriers.forEach(carrier => {
-          if (carrier.isActive && carrier.enabledServices) {
-            carrier.enabledServices.forEach(service => {
-              if (service.isActive) {
-                flattenedOptions.push({
-                  code: service.serviceCode,
-                  label: `${carrier.carrierType} - ${service.serviceName}`,
-                  carrierId: carrier._id,
-                  carrierType: carrier.carrierType
-                });
-              }
-            });
-          }
-        });
-      }
-
-      setShippingOptions(flattenedOptions);
-      
-      if (flattenedOptions.length > 0) {
-        setSelectedShippingMethod(flattenedOptions[0].code);
-      }
-    }
-  }, [carriers, carrierStatus]);
-
   const handleAddressSelect = (e) => {
     const id = e.target.value;
     setSelectedAddressId(id);
     
+    // Reset shipping rates whenever address changes
+    setShippingOptions([]);
+    setShippingCost(0);
+    setSelectedShippingMethod('');
+    
     if (id) {
       const addr = addresses.find(a => a._id === id);
       if (addr) {
-        let dbCountry = addr.country || 'USA';
-        if (dbCountry === 'United States') dbCountry = 'USA';
+        let dbCountry = addr.country || 'US';
+        if (dbCountry === 'United States' || dbCountry === 'USA') dbCountry = 'US';
 
         setAddressForm({
-          firstName: addr.firstName || '',
-          lastName: addr.lastName || '',
-          company: addr.company || '',
-          street1: addr.street1 || '',
-          street2: addr.street2 || '',
-          city: addr.city || '',
-          state: addr.state || '',
-          zipCode: addr.zipCode || '',
-          country: dbCountry,
-          contactPhone: addr.contactPhone || '',
-          contactEmail: addr.contactEmail || '',
+          firstName: addr.firstName || '', lastName: addr.lastName || '', company: addr.company || '',
+          street1: addr.street1 || '', street2: addr.street2 || '', city: addr.city || '',
+          state: addr.state || '', zipCode: addr.zipCode || '', country: dbCountry,
+          contactPhone: addr.contactPhone || '', contactEmail: addr.contactEmail || '',
         });
         setSaveToAddressBook(false);
       }
@@ -164,21 +134,114 @@ export default function Checkout() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    if (selectedAddressId) {
-      setSelectedAddressId('');
+    if (selectedAddressId) setSelectedAddressId('');
+    
+    // If they change core routing details, invalidate the old shipping rates
+    if (['city', 'state', 'zipCode', 'country'].includes(name)) {
+      setShippingOptions([]);
+      setShippingCost(0);
+      setSelectedShippingMethod('');
     }
+    
     setAddressForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // --- Financial & Weight Calculations ---
   const getProductPrice = (product) => {
     return Number(product.price || product.unitCost || product.cost || 0);
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (getProductPrice(item.product) * item.quantity), 0);
-  const shipping = subtotal > 0 ? 25.00 : 0; 
   const tax = subtotal * 0.08; 
-  const total = subtotal + shipping + tax;
+  const total = subtotal + shippingCost + tax;
 
+  // Weight Calculation: Sums product.weight (ounces) * quantity
+  const totalWeightInOunces = cartItems.reduce((acc, item) => {
+    const itemOunces = Number(item.product?.weight) || 0;
+    return acc + (itemOunces * item.quantity);
+  }, 0);
+  const totalWeightInLbs = (totalWeightInOunces / 16).toFixed(2);
+
+  // --- LIVE SHIPSTATION RATE FETCHING ---
+  const handleCalculateRates = async () => {
+    if (!addressForm.city || !addressForm.state || !addressForm.zipCode) {
+      setFormError('Please enter a City, State, and ZIP Code to calculate rates.');
+      return;
+    }
+    
+    setIsFetchingRates(true);
+    setFormError('');
+    
+    try {
+      const token = localStorage.getItem('token');
+      const activeCarriers = carriers.filter(c => c.isActive);
+      let allLiveRates = [];
+
+      // Loop through configured carriers and fetch rates
+      for (const carrier of activeCarriers) {
+        const payload = {
+          carrierCode: carrier.carrierType,
+          address: addressForm,
+          totalWeightInOunces: totalWeightInOunces > 0 ? totalWeightInOunces : 16 // Fallback to 1lb (16oz) to prevent API crash
+        };
+
+        const res = await fetch(`${API_URL}/shipstation/rates/live`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) continue; // Skip to next carrier if one fails
+        
+        const data = await res.json();
+        const returnedRates = data.data?.rates || [];
+        
+        // Filter live rates against services you explicitly enabled in Settings
+        const enabledServiceCodes = carrier.enabledServices.filter(s => s.isActive).map(s => s.serviceCode);
+        
+        const validRates = returnedRates
+          .filter(r => enabledServiceCodes.includes(r.serviceCode))
+          .map(r => ({
+            code: r.serviceCode,
+            label: `${carrier.carrierType.toUpperCase()} - ${r.serviceName} ($${r.shipmentCost.toFixed(2)})`,
+            cost: r.shipmentCost,
+            carrierId: carrier._id,
+            carrierType: carrier.carrierType
+          }));
+          
+        allLiveRates = [...allLiveRates, ...validRates];
+      }
+      
+      // Sort cheapest to most expensive
+      allLiveRates.sort((a, b) => a.cost - b.cost);
+      
+      setShippingOptions(allLiveRates);
+      if (allLiveRates.length > 0) {
+        setSelectedShippingMethod(allLiveRates[0].code);
+        setShippingCost(allLiveRates[0].cost);
+      } else {
+        setShippingCost(0);
+        setFormError('No valid shipping rates found. Ensure carriers are configured correctly.');
+      }
+    } catch (err) {
+      console.error('Rate calculation error:', err);
+      setFormError('Failed to communicate with ShipStation. Try again later.');
+    } finally {
+      setIsFetchingRates(false);
+    }
+  };
+
+  const handleShippingMethodChange = (e) => {
+    const code = e.target.value;
+    setSelectedShippingMethod(code);
+    const selected = shippingOptions.find(opt => opt.code === code);
+    if (selected) setShippingCost(selected.cost);
+  };
+
+  // --- SUBMIT ORDER ---
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (cartItems.length === 0 || !user?._id) return;
@@ -187,8 +250,8 @@ export default function Checkout() {
       setFormError('Please fill in all required shipping fields marked with *');
       return;
     }
-    if (!selectedShippingMethod) {
-      setFormError('Please select a shipping method.');
+    if (!selectedShippingMethod || shippingOptions.length === 0) {
+      setFormError('Please calculate and select a shipping method.');
       return;
     }
     if (!parsedDivisionId) {
@@ -205,7 +268,7 @@ export default function Checkout() {
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          user: user._id, // Assigning to the User model, not Customer model
+          user: user._id, 
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -231,10 +294,11 @@ export default function Checkout() {
 
       const orderPayload = {
         orderNumber,
-        customer: user.customer, // Orders still link to the overarching customer entity
+        customer: user.customer, 
         division: parsedDivisionId, 
         items: formattedItems,
         totalAmount: total,
+        totalWeightOunces: totalWeightInOunces, // Optionally send total weight to DB
         shippingAddress: {
           recipientName: `${addressForm.firstName} ${addressForm.lastName}`.trim(),
           email: addressForm.contactEmail,
@@ -244,13 +308,13 @@ export default function Checkout() {
           city: addressForm.city,
           state: addressForm.state,
           zip: addressForm.zipCode,
-          country: addressForm.country || 'USA'
+          country: addressForm.country || 'US'
         },
         shippingDetails: {
           carrierId: selectedOption?.carrierId,
           carrierType: selectedOption?.carrierType,
           serviceCode: selectedOption?.code,
-          shippingCost: shipping
+          shippingCost: shippingCost
         },
         notes: finalNotes
       };
@@ -446,9 +510,9 @@ export default function Checkout() {
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
                     <div className="relative">
                       <select name="country" value={addressForm.country} onChange={handleInputChange} className={`${premiumInputClass} appearance-none`}>
-                        <option value="USA">United States</option>
-                        <option value="Canada">Canada</option>
-                        {addressForm.country !== 'USA' && addressForm.country !== 'Canada' && addressForm.country !== '' && (
+                        <option value="US">United States</option>
+                        <option value="CA">Canada</option>
+                        {addressForm.country !== 'US' && addressForm.country !== 'CA' && addressForm.country !== '' && (
                           <option value={addressForm.country}>{addressForm.country}</option>
                         )}
                       </select>
@@ -487,38 +551,51 @@ export default function Checkout() {
               </div>
               <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Shipping Method</h2>
             </div>
+            
             <div className="p-5 sm:p-8">
-              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
-                Preferred Service <span className="text-red-500">*</span>
-              </label>
               
-              {carrierStatus === 'loading' ? (
-                <div className="flex items-center gap-2 text-sm font-medium text-gray-500 h-12 px-4 border border-white/60 bg-white/50 rounded-xl">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Fetching available services...
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
+                <div className="w-full">
+                  <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
+                    Select Service <span className="text-red-500">*</span>
+                  </label>
+                  
+                  {shippingOptions.length > 0 ? (
+                    <div className="relative">
+                      <select
+                        value={selectedShippingMethod}
+                        onChange={handleShippingMethodChange}
+                        className={`${premiumInputClass} cursor-pointer appearance-none text-xs sm:text-sm`}
+                      >
+                        <option value="" disabled>Choose a shipping method...</option>
+                        {shippingOptions.map(option => (
+                          <option key={`${option.carrierId}-${option.code}`} value={option.code}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs font-medium text-gray-500 bg-white/50 p-4 rounded-xl border border-dashed border-gray-300 flex items-center">
+                      Fill out your shipping address and click 'Calculate Rates' to see available options.
+                    </div>
+                  )}
                 </div>
-              ) : shippingOptions.length === 0 ? (
-                <div className="text-xs sm:text-sm font-medium text-red-600 p-3 sm:p-0 sm:h-12 sm:px-4 border border-red-200/50 bg-red-50/80 rounded-xl flex items-center shadow-sm">
-                  No shipping services are available for this division. Please contact support.
-                </div>
-              ) : (
-                <div className="relative">
-                  <select
-                    value={selectedShippingMethod}
-                    onChange={(e) => setSelectedShippingMethod(e.target.value)}
-                    className={`${premiumInputClass} cursor-pointer appearance-none text-xs sm:text-sm`}
-                  >
-                    <option value="" disabled>Choose a shipping method...</option>
-                    {shippingOptions.map(option => (
-                      <option key={`${option.carrierId}-${option.code}`} value={option.code}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                  </div>
-                </div>
-              )}
+
+                <button 
+                  type="button" 
+                  onClick={handleCalculateRates}
+                  disabled={isFetchingRates}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors shadow-md disabled:opacity-70 flex-shrink-0"
+                >
+                  {isFetchingRates ? <Loader2 className="animate-spin" size={16} /> : <Calculator size={16} />}
+                  Calculate Rates
+                </button>
+              </div>
+
             </div>
           </section>
 
@@ -583,24 +660,33 @@ export default function Checkout() {
             
             {/* Items List */}
             <div className="max-h-[250px] sm:max-h-[350px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
-              {cartItems.map((item) => (
-                <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl overflow-hidden border border-white/80 bg-white/50 flex flex-shrink-0 items-center justify-center shadow-inner relative z-10">
-                    <CheckoutItemImage src={item.product?.image || item.product?.productImage} alt={item.product?.desc} />
-                  </div>
-                  <div className="flex flex-col flex-1 justify-center min-w-0">
-                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.product.desc}>
-                      {item.product.desc}
-                    </h3>
-                    <div className="flex items-center justify-between mt-1.5 sm:mt-2">
-                      <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
-                      <span className="text-xs sm:text-sm font-extrabold text-blue-600">
-                        ${((getProductPrice(item.product) || 0) * item.quantity).toFixed(2)}
-                      </span>
+              {cartItems.map((item) => {
+                const itemOunces = (Number(item.product?.weight) || 0) * item.quantity;
+                return (
+                  <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl overflow-hidden border border-white/80 bg-white/50 flex flex-shrink-0 items-center justify-center shadow-inner relative z-10">
+                      <CheckoutItemImage src={item.product?.image || item.product?.productImage} alt={item.product?.desc} />
+                    </div>
+                    <div className="flex flex-col flex-1 justify-center min-w-0">
+                      <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.product.desc}>
+                        {item.product.desc}
+                      </h3>
+                      <div className="flex items-center justify-between mt-1.5 sm:mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
+                          {/* Item Weight Badge */}
+                          <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 bg-gray-50 border border-gray-200 shadow-sm px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Weight size={10} /> {itemOunces} oz
+                          </span>
+                        </div>
+                        <span className="text-xs sm:text-sm font-extrabold text-blue-600">
+                          ${((getProductPrice(item.product) || 0) * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Calculations */}
@@ -610,8 +696,12 @@ export default function Checkout() {
                 <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-gray-600 font-medium">
+                <span className="flex items-center gap-1.5"><Weight size={14} className="text-gray-400" /> Total Weight</span>
+                <span className="font-bold text-gray-900">{totalWeightInLbs} lbs</span>
+              </div>
+              <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
-                <span className="font-bold text-gray-900">${shipping.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">${shippingCost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Estimated Tax</span>

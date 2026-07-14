@@ -454,26 +454,7 @@ export default function Navbar() {
                 </button>
               </div>
 
-              {/* Gamified Free Shipping Bar */}
-              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-b border-white/50 relative overflow-hidden">
-                <div className="flex items-center gap-2 mb-2 relative z-10">
-                  <Truck className={`h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 ${amountToFreeShipping === 0 ? 'text-emerald-500' : 'text-blue-500'}`} />
-                  <p className="text-[11px] sm:text-xs font-bold text-slate-700 truncate">
-                    {amountToFreeShipping === 0 
-                      ? <span className="text-emerald-600 flex items-center gap-1">Unlocked Free VIP Shipping! <Sparkles className="h-3 w-3 shrink-0" /></span> 
-                      : <span>Add <strong className="text-blue-600">${amountToFreeShipping.toFixed(2)}</strong> more for free shipping</span>
-                    }
-                  </p>
-                </div>
-                <div className="h-1.5 sm:h-2 w-full bg-slate-200/80 rounded-full overflow-hidden relative z-10">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${shippingProgress}%` }}
-                    transition={{ duration: 0.5, ease: "easeOut" }}
-                    className={`h-full rounded-full ${amountToFreeShipping === 0 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' : 'bg-gradient-to-r from-blue-500 to-indigo-500'}`}
-                  />
-                </div>
-              </div>
+             
               
               {/* Dynamic Content Body */}
               <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-4 sm:py-6 custom-scrollbar relative">

@@ -6,6 +6,7 @@ import inventoryReducer from './slices/inventorySlice';
 import addressReducer from './slices/addressSlice';
 import carrierReducer from './slices/carrierSlice';
 import divisionReducer from './slices/divisionSlice'; 
+import checkoutReducer from './slices/checkoutSlice';
 
 export const store = configureStore({
   reducer: {
@@ -16,8 +17,10 @@ export const store = configureStore({
     addresses: addressReducer,
     carriers: carrierReducer,
     divisions: divisionReducer, 
+    checkout: checkoutReducer,
   },
 });
+
 
 store.subscribe(() => {
   try {

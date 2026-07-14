@@ -5,7 +5,7 @@ import { fetchOrderById, clearCurrentOrder } from '../store/slices/orderSlice';
 import { 
   ArrowLeft, Package, MapPin, Truck, FileText, 
   Loader2, AlertCircle, Calendar, CreditCard, ExternalLink,
-  CheckCircle2, Mail, Phone, Clock
+  CheckCircle2, Mail, Phone, Clock, Weight // <-- Added Weight icon
 } from 'lucide-react';
 
 // Utility to generate dynamic tracking links based on carrier name
@@ -103,6 +103,15 @@ export default function OrderDetails() {
   const addr = order.shippingAddress;
   const ship = order.shippingDetails;
   const currentStep = getProgressStep(order.status);
+
+  // --- Safely calculate total order weight ---
+  // Falls back to manually summing the items if the API didn't provide `totalWeightOunces` on the root order
+  const totalWeightInOunces = order.totalWeightOunces || order.items?.reduce((acc, item) => {
+    const w = Number(item.weight) || Number(item.product?.weight) || 0;
+    return acc + (w * item.quantity);
+  }, 0);
+  
+  const totalWeightInLbs = totalWeightInOunces ? (totalWeightInOunces / 16).toFixed(2) : 0;
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 px-4 lg:px-0 pb-12">
@@ -318,31 +327,45 @@ export default function OrderDetails() {
             
             {/* Itemized Breakdown */}
             <div className="max-h-[300px] sm:max-h-[400px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
-              {order.items?.map((item, index) => (
-                <div key={index} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
-                  <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner overflow-hidden">
-                    {item.productImage ? (
-                       <img src={item.productImage} alt={item.name} className="h-full w-full object-cover" />
-                    ) : (
-                       <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-                    )}
-                  </div>
-                  <div className="flex flex-col flex-1 justify-center min-w-0">
-                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.name}>
-                      {item.name}
-                    </h3>
-                    <p className="text-[9px] sm:text-[10px] text-gray-500 font-mono font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</p>
-                    <div className="flex items-center justify-between mt-1.5 sm:mt-2">
-                      <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 tracking-tight">
-                        {formatMoney(item.unitPrice)} × {item.quantity}
-                      </span>
-                      <span className="text-xs sm:text-sm font-extrabold text-blue-600">
-                        {formatMoney(item.totalPrice)}
-                      </span>
+              {order.items?.map((item, index) => {
+                // Support both populated item.product and flat item structures
+                const itemOunces = (Number(item.weight) || Number(item.product?.weight) || 0) * item.quantity;
+                
+                return (
+                  <div key={index} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
+                    <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner overflow-hidden">
+                      {item.productImage ? (
+                         <img src={item.productImage} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                         <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex flex-col flex-1 justify-center min-w-0">
+                      <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate tracking-tight" title={item.name}>
+                        {item.name}
+                      </h3>
+                      <p className="text-[9px] sm:text-[10px] text-gray-500 font-mono font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</p>
+                      
+                      <div className="flex items-center justify-between mt-1.5 sm:mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
+                          
+                          {/* Item Weight Badge */}
+                          {itemOunces > 0 && (
+                            <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 bg-gray-50 border border-gray-200 shadow-sm px-2 py-0.5 rounded-md flex items-center gap-1">
+                              <Weight size={10} /> {itemOunces} oz
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-xs sm:text-sm font-extrabold text-blue-600">
+                          {formatMoney(item.totalPrice)}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Financial Calculations */}
@@ -353,6 +376,15 @@ export default function OrderDetails() {
                   {formatMoney((order.totalAmount || 0) - (ship?.shippingCost || 0))}
                 </span>
               </div>
+              
+              {/* Total Order Weight */}
+              {totalWeightInLbs > 0 && (
+                <div className="flex justify-between items-center text-gray-600 font-medium">
+                  <span className="flex items-center gap-1.5"><Weight size={14} className="text-gray-400" /> Total Weight</span>
+                  <span className="font-bold text-gray-900">{totalWeightInLbs} lbs</span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
                 <span className="font-bold text-gray-900">

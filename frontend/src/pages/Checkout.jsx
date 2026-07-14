@@ -4,12 +4,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; 
 import { fetchCarriers } from '../store/slices/carrierSlice'; 
+import { updateInventory } from '../store/slices/inventorySlice';
+import api from '../utils/api'; // <-- Imported centralized Axios instance
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
 } from 'lucide-react';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
 // Robust internal component to handle checkout image loading and error fallbacks
 const CheckoutItemImage = ({ src, alt }) => {
@@ -88,7 +88,7 @@ export default function Checkout() {
   const activeDivisionId = activeDivision?._id || localStorage.getItem('dsm_active_division') || user?.divisions?.[0];
   const parsedDivisionId = typeof activeDivisionId === 'object' ? activeDivisionId._id : activeDivisionId;
 
-  // 1. Fetch Addresses scoped dynamically to the logged-in User's ID (Aligned with updated schema)
+  // 1. Fetch Addresses scoped dynamically to the logged-in User's ID
   useEffect(() => {
     if (addressStatus === 'idle' && user?._id) {
       dispatch(fetchAddressesByUser(user._id));
@@ -171,12 +171,12 @@ export default function Checkout() {
   };
 
   const getProductPrice = (product) => {
-    return Number(product.unitPrice || product.unitCost || product.cost || 0);
+    return Number(product.price || product.unitCost || product.cost || 0);
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (getProductPrice(item.product) * item.quantity), 0);
   const shipping = 0; 
-  const total = subtotal + shipping
+  const total = subtotal + shipping;
 
   const totalWeightInOunces = cartItems.reduce((acc, item) => {
     const itemOunces = Number(item.product?.weight) || 0;
@@ -206,10 +206,11 @@ export default function Checkout() {
     let finalAddressId = selectedAddressId;
 
     try {
+      // 1. Create/Save Address if selected
       if (!finalAddressId && saveToAddressBook) {
         const payload = { 
           ...addressForm, 
-          user: user._id, // Assigning to the User model, not Customer model
+          user: user._id, // Assigning to the User model
           addressType: 'Shipping', 
           isDefault: false 
         };
@@ -218,12 +219,11 @@ export default function Checkout() {
       }
 
       const selectedOption = shippingOptions.find(opt => opt.code === selectedShippingMethod);
-      const token = localStorage.getItem('token');
       
       const formattedItems = cartItems.map(item => {
         const unitPrice = getProductPrice(item.product);
         return {
-          sku: item.product.id,
+          sku: item.product.id || item.product.sku,
           name: item.product.desc,
           quantity: item.quantity,
           unitPrice: unitPrice,
@@ -233,9 +233,10 @@ export default function Checkout() {
 
       const finalNotes = poNumber ? `PO Number: ${poNumber}\n${orderNotes}` : orderNotes;
 
+      // 2. Submit the Order payload via the centralized Axios api
       const orderPayload = {
         orderNumber,
-        customer: user.customer, // Orders still link to the overarching customer entity
+        customer: user.customer, 
         division: parsedDivisionId, 
         items: formattedItems,
         totalAmount: total,
@@ -260,28 +261,46 @@ export default function Checkout() {
         notes: finalNotes
       };
 
-      const response = await fetch(`${API_URL}/orders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        },
-        body: JSON.stringify(orderPayload)
-      });
+      await api.post('/orders', orderPayload);
 
-      const data = await response.json();
+      // =================================================================
+      // 3. INVENTORY DEDUCTION SYNC (VIA REDUX SLICE)
+      // =================================================================
+      try {
+        await Promise.all(cartItems.map(item => {
+          console.log(item)
+          // Identify original stock quantities
+          const currentStock = Number(item.product.unitsOnHand) || Number(item.product.available) || 0;
+          const newStock = Math.max(0, currentStock - item.quantity); // Prevent negative stock
+          
+          // Construct the merged payload ensuring we don't wipe out existing database fields
+          const updatedInventoryData = {
+            ...item.product,
+            unitsOnHand: newStock,
+            available: newStock 
+          };
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to submit order to COBRA.');
+          // Dispatch the update natively through Redux to seamlessly update global state & db
+          return dispatch(updateInventory({ 
+            id: item.product._id || item.product.id, 
+            inventoryData: updatedInventoryData 
+          })).unwrap();
+        }));
+      } catch (inventoryError) {
+        console.warn('Order succeeded, but backend inventory deduction threw a warning.', inventoryError);
       }
+      // =================================================================
 
+      // 4. Clear and Redirect
       dispatch(clearCart());
       setIsSubmitting(false);
       navigate('/orders'); 
       
     } catch (err) {
       console.error('Failed to submit order:', err);
-      setFormError(err.message || 'There was a critical error submitting your order. Please try again.');
+      // Safely extract Axios error message if it exists
+      const errorMessage = err.response?.data?.message || err.message || 'There was a critical error submitting your order. Please try again.';
+      setFormError(errorMessage);
       setIsSubmitting(false);
     }
   };
@@ -615,14 +634,18 @@ export default function Checkout() {
             <div className="p-5 sm:p-6 space-y-3 sm:space-y-4 text-xs sm:text-sm bg-white/40">
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
-                <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">
+                  ${subtotal.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
-                <span className="font-bold text-gray-900">${shipping.toFixed(2)}</span>
+                <span className="font-bold text-gray-900">
+                  ${shipping.toFixed(2)}
+                </span>
               </div>
               <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
-                <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total</span>
+                <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
                 <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
                   ${total.toFixed(2)}
                 </span>

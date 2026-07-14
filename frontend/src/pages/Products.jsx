@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../store/slices/cartSlice';
 import { fetchInventory } from '../store/slices/inventorySlice';
 import { Loader2, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
-// Import our new modular components
+// Import our modular components
 import ProductSidebar from '../components/products/ProductSidebar';
 import ProductHeader from '../components/products/ProductHeader';
 import ProductTable from '../components/products/ProductTable';
@@ -12,36 +13,43 @@ import ProductTable from '../components/products/ProductTable';
 export default function Products() {
   const dispatch = useDispatch();
   
-  // Connect to Redux state modules
-  const { items, status, error } = useSelector((state) => state.inventory);
-  const activeDivision = useSelector((state) => state.divisions.activeDivision);
+  // Connect to Redux state modules safely
+  const { items = [], status, error } = useSelector((state) => state.inventory || {});
+  const activeDivisionRaw = useSelector((state) => state.divisions?.activeDivision);
+  
+  // Robustly extract the string ID regardless of whether Redux holds an object or a string
+  const divisionId = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null 
+    ? activeDivisionRaw._id 
+    : activeDivisionRaw;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [expandedCategories, setExpandedCategories] = useState({});
   const [quantities, setQuantities] = useState({});
 
-  const divisionId = activeDivision?._id || activeDivision;
-
-  // Fetch inventory
+  // Fetch inventory when division context changes
   useEffect(() => {
     if (divisionId) {
       dispatch(fetchInventory(divisionId));
     }
   }, [dispatch, divisionId]);
 
-  // Derive Nested Categories
+  // Derive Nested Categories with defensive Object/String checks
   const dynamicCategories = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+
     const categoryMap = {};
     
     items.forEach(item => {
       const itemDivisionId = item.division?._id || item.division;
       if (itemDivisionId !== divisionId) return;
 
-      const divisionName = item.division?.divisionName || 'Uncategorized';
-      const cat1 = item.category1?.categoryName || 'General';
-      const cat2 = item.category2?.categoryName;
-      const cat3 = item.category3?.categoryName;
+      const divisionName = item.division?.divisionName || (typeof item.division === 'string' ? item.division : 'Uncategorized');
+      
+      // Safely handle both populated Mongoose objects and unpopulated strings
+      const cat1 = item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General');
+      const cat2 = item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null);
+      const cat3 = item.category3?.categoryName || (typeof item.category3 === 'string' ? item.category3 : null);
       
       if (!categoryMap[divisionName]) categoryMap[divisionName] = {};
       if (!categoryMap[divisionName][cat1]) categoryMap[divisionName][cat1] = {};
@@ -72,8 +80,10 @@ export default function Products() {
     }).sort((a, b) => a.division.localeCompare(b.division));
   }, [items, divisionId]);
 
-  // Filter and Map Products
+  // Filter and Map Products with robust fallback values
   const filteredProducts = useMemo(() => {
+    if (!Array.isArray(items)) return [];
+
     const mapped = items
       .filter(item => {
         const itemDivisionId = item.division?._id || item.division;
@@ -82,19 +92,19 @@ export default function Products() {
       .map(item => ({
         _id: item._id,
         id: item.sku || item.productCode || 'N/A', 
-        image: item.productImage || null,
+        image: item.productImage || item.image || null,
         desc: item.itemName || item.description || 'Unknown Item',
-        weight: item.weight || 0, // <-- Properly mapped to the DB weight field
+        weight: item.weight || 0,
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
         available: item.available || item.unitsOnHand || 0,
-        onOrder: item.pipelineSupply || item.openOrders || 0,
-        cat1: item.category1?.categoryName || 'General',
-        cat2: item.category2?.categoryName,
-        cat3: item.category3?.categoryName,
-        displayCategory: item.category1?.categoryName || 'General',
+        onOrder: item.pipelineSupply || item.openOrders || item.onOrder || 0,
+        cat1: item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General'),
+        cat2: item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null),
+        cat3: item.category3?.categoryName || (typeof item.category3 === 'string' ? item.category3 : null),
+        displayCategory: item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General'),
         price: item.price || 0,
-        cost: item.unitCost || item.price || 0
+        cost: item.unitCost || item.cost || item.price || 0
       }));
       
     const finalFiltered = mapped.filter(product => {
@@ -134,6 +144,7 @@ export default function Products() {
     if (qty > 0) {
       dispatch(addToCart({ product, quantity: qty }));
       setQuantities(prev => ({ ...prev, [product.id]: '' }));
+      toast.success(`Added ${qty} unit${qty > 1 ? 's' : ''} to order queue`);
     }
   };
 
@@ -143,7 +154,7 @@ export default function Products() {
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
           <Loader2 className="h-10 w-10 animate-spin" />
-          <p className="font-bold tracking-tight text-gray-600">Syncing Division Inventory...</p>
+          <p className="font-bold tracking-tight text-gray-600">Syncing Division Catalog...</p>
         </div>
       </div>
     );
@@ -151,14 +162,14 @@ export default function Products() {
 
   if (status === 'failed') {
     return (
-      <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
-        <div className="flex max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
+      <div className="flex h-[calc(100vh-10rem)] items-center justify-center px-4">
+        <div className="flex w-full max-w-md flex-col items-center text-center animate-in fade-in p-8 bg-white/40 backdrop-blur-2xl backdrop-saturate-150 border border-white/60 rounded-3xl shadow-xl">
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-bold text-gray-900">Failed to load inventory</h2>
-          <p className="text-gray-500 mt-2 font-medium">{error}</p>
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Failed to load catalog</h2>
+          <p className="text-sm font-medium text-gray-500 mt-2">{error}</p>
           <button 
             onClick={() => divisionId && dispatch(fetchInventory(divisionId))}
-            className="mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
+            className="w-full sm:w-auto mt-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-3 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
           </button>
@@ -168,7 +179,7 @@ export default function Products() {
   }
 
   return (
-    <div className="relative flex flex-col md:flex-row gap-4 md:gap-6 min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] pt-4 md:pt-6 animate-in fade-in duration-700">
+    <div className="relative flex flex-col md:flex-row gap-4 md:gap-6 min-h-[calc(100vh-8rem)] md:h-[calc(100vh-8rem)] pt-4 md:pt-6 animate-in fade-in duration-700 px-4 xl:px-0">
       
       {/* Decorative Orbs */}
       <div className="absolute top-10 left-10 w-72 h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>

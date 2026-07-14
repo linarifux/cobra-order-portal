@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Minus, Search, Package } from 'lucide-react';
 
-// Internal component to gracefully handle broken or missing image links
+// Bulletproof internal component to handle images without getting stuck invisible
 const ProductThumbnail = ({ src, alt, sizeClass = "h-16 w-16" }) => {
   const [hasError, setHasError] = useState(false);
 
+  // Reset error state if the source URL changes
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
   return (
-    <div className={`${sizeClass} shrink-0 bg-gradient-to-tr from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl border border-white/80 shadow-inner flex items-center justify-center overflow-hidden`}>
+    <div className={`${sizeClass} shrink-0 bg-white rounded-xl sm:rounded-2xl border border-slate-200/60 shadow-inner flex items-center justify-center overflow-hidden relative`}>
       {src && !hasError ? (
         <img 
           src={src} 
@@ -17,13 +22,87 @@ const ProductThumbnail = ({ src, alt, sizeClass = "h-16 w-16" }) => {
           loading="lazy"
         />
       ) : (
-        <Package className="h-1/2 w-1/2 text-slate-300" />
+        <div className="flex h-full w-full items-center justify-center bg-gradient-to-tr from-slate-50 to-slate-100">
+          <Package className="h-1/2 w-1/2 text-slate-300" />
+        </div>
       )}
     </div>
   );
 };
 
-export default function ProductTable({ products, quantities, handleQuantityChange, handleAdd }) {
+export default function ProductTable({ 
+  products = [], 
+  quantities = {}, 
+  handleQuantityChange, 
+  handleAdd, 
+  isLoading = false, 
+  onRefresh 
+}) {
+
+  // --- Premium Loading Skeletons ---
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+        {/* Mobile Skeleton */}
+        <div className="md:hidden flex flex-col gap-4 p-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4 animate-pulse">
+              <div className="flex gap-4 items-start">
+                <div className="h-20 w-20 shrink-0 bg-slate-200/60 rounded-2xl"></div>
+                <div className="flex flex-col gap-2 flex-1 pt-1">
+                  <div className="h-4 bg-slate-200/60 rounded-md w-3/4"></div>
+                  <div className="h-3 bg-slate-200/60 rounded-md w-1/3"></div>
+                  <div className="h-3 bg-slate-200/60 rounded-md w-full mt-2"></div>
+                </div>
+              </div>
+              <div className="h-10 bg-slate-200/50 rounded-xl w-full"></div>
+              <div className="h-12 bg-slate-200/60 rounded-xl w-full"></div>
+            </div>
+          ))}
+        </div>
+        
+        {/* Desktop Skeleton */}
+        <table className="hidden md:table w-full text-left border-collapse table-fixed">
+          <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xl z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b border-slate-200/60">
+            <tr>
+              <th className="w-[45%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product Details</th>
+              <th className="w-[20%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:table-cell">Inventory Status</th>
+              <th className="w-[15%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Unit Price</th>
+              <th className="w-[20%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100/80">
+            {[...Array(6)].map((_, i) => (
+              <tr key={i} className="animate-pulse">
+                <td className="px-6 py-5 align-top">
+                  <div className="flex items-start gap-4">
+                    <div className="h-14 w-14 shrink-0 bg-slate-200/60 rounded-2xl"></div>
+                    <div className="flex flex-col gap-2 flex-1 pt-1">
+                      <div className="h-4 bg-slate-200/60 rounded-md w-2/3"></div>
+                      <div className="h-3 bg-slate-200/60 rounded-md w-full"></div>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-5 align-top hidden lg:table-cell">
+                  <div className="flex flex-col gap-2 pt-1">
+                    <div className="h-4 bg-slate-200/60 rounded-md w-1/2"></div>
+                    <div className="h-3 bg-slate-200/60 rounded-md w-3/4"></div>
+                  </div>
+                </td>
+                <td className="px-6 py-5 align-top text-right">
+                  <div className="h-5 bg-slate-200/60 rounded-md w-16 ml-auto mt-1"></div>
+                </td>
+                <td className="px-6 py-5 align-top">
+                  <div className="h-10 bg-slate-200/60 rounded-xl w-32 ml-auto"></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar relative">
       {products.length > 0 ? (
@@ -31,25 +110,29 @@ export default function ProductTable({ products, quantities, handleQuantityChang
           {/* MOBILE VIEW: Stacked Cards */}
           <div className="md:hidden flex flex-col gap-4 p-4">
             {products.map((product) => {
-              const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory;
+              const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory || 'General';
+              // Bulletproof numerics
+              const price = Number(product.price || product.cost || 0);
+              const available = Number(product.available || product.unitsOnHand || 0);
+              const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
 
               return (
-                <div key={product._id} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
+                <div key={product.id || product._id} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
                   
                   {/* Top Row: Image & Details */}
                   <div className="flex gap-4 items-start">
-                    <ProductThumbnail src={product.image} alt={product.desc} sizeClass="h-20 w-20" />
+                    <ProductThumbnail src={product.image || product.productImage} alt={product.desc} sizeClass="h-20 w-20" />
                     
                     <div className="flex flex-col gap-1.5 min-w-0 flex-1">
                       <div className="flex justify-between items-start gap-2">
                         <Link 
-                          to={`/products/${encodeURIComponent(product.id)}`}
+                          to={`/products/${encodeURIComponent(product._id)}`}
                           className="text-sm font-black text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline truncate"
                         >
                           {product.id}
                         </Link>
                         <span className="text-sm font-black text-slate-900 shrink-0">
-                          ${(product.price || product.cost || 0).toFixed(2)}
+                          ${price.toFixed(2)}
                         </span>
                       </div>
                       
@@ -65,9 +148,9 @@ export default function ProductTable({ products, quantities, handleQuantityChang
 
                   {/* Inventory Mini-Stats */}
                   <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white/50 p-2.5 rounded-xl border border-white/60">
-                    <span><strong className="text-slate-800">{product.available}</strong> in stock</span>
+                    <span><strong className="text-slate-800">{available}</strong> in stock</span>
                     <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <span><strong className="text-slate-800">{product.onOrder}</strong> on order</span>
+                    <span><strong className="text-slate-800">{onOrder}</strong> on order</span>
                   </div>
 
                   {/* Action Pill (Full Width) */}
@@ -99,9 +182,7 @@ export default function ProductTable({ products, quantities, handleQuantityChang
           <table className="hidden md:table w-full text-left border-collapse table-fixed">
             <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xl z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border-b border-slate-200/60">
               <tr>
-                {/* 10 + 35 + 20 + 15 + 20 = 100% properly distributed */}
-                <th className="w-[10%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Image</th>
-                <th className="w-[35%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product Details</th>
+                <th className="w-[45%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Product Details</th>
                 <th className="w-[20%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:table-cell">Inventory Status</th>
                 <th className="w-[15%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Unit Price</th>
                 <th className="w-[20%] px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
@@ -109,69 +190,69 @@ export default function ProductTable({ products, quantities, handleQuantityChang
             </thead>
             <tbody className="divide-y divide-slate-100/80">
               {products.map((product) => {
-                const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory;
+                const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory || 'General';
+                // Bulletproof numerics
+                const price = Number(product.price || product.cost || 0);
+                const available = Number(product.available || product.unitsOnHand || 0);
+                const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
 
                 return (
-                  <tr key={product._id} className="hover:bg-white/60 transition-colors duration-200 group">
+                  <tr key={product.id || product._id} className="hover:bg-white/60 transition-colors duration-200 group">
                     
-                    {/* Column 1: Image Thumbnail */}
+                    {/* Column 1: Fused Image, SKU, Description & Category */}
                     <td className="px-6 py-4 align-top">
-                      <div className="flex justify-center">
-                        <ProductThumbnail src={product.image} alt={product.desc} sizeClass="h-14 w-14" />
-                      </div>
-                    </td>
-
-                    {/* Column 2: SKU & Description & Category */}
-                    <td className="px-6 py-4 align-top">
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <Link 
-                            to={`/products/${encodeURIComponent(product.id)}`}
-                            className="text-sm font-black text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline truncate"
-                          >
-                            {product.id}
-                          </Link>
-                          <span 
-                            className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 shrink-0 truncate max-w-[120px]"
-                            title={lowestCategory}
-                          >
-                            {lowestCategory}
-                          </span>
+                      <div className="flex items-start gap-4">
+                        <ProductThumbnail src={product.image || product.productImage} alt={product.desc} sizeClass="h-14 w-14" />
+                        
+                        <div className="flex flex-col min-w-0 py-0.5">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <Link 
+                              to={`/products/${encodeURIComponent(product._id)}`}
+                              className="text-sm font-black text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline truncate"
+                            >
+                              {product.id}
+                            </Link>
+                            <span 
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 shrink-0 truncate max-w-[120px]"
+                              title={lowestCategory}
+                            >
+                              {lowestCategory}
+                            </span>
+                          </div>
+                          <p className="text-xs font-medium text-slate-600 truncate pr-4" title={product.desc}>
+                            {product.desc}
+                          </p>
                         </div>
-                        <p className="text-xs font-medium text-slate-600 truncate pr-4" title={product.desc}>
-                          {product.desc}
-                        </p>
                       </div>
                     </td>
 
-                    {/* Column 3: Consolidated Stock Information */}
-                    <td className="px-6 py-4 align-top hidden lg:table-cell">
+                    {/* Column 2: Consolidated Stock Information */}
+                    <td className="px-6 py-4 align-top hidden lg:table-cell pt-6">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-slate-900">
-                          {product.available} <span className="text-xs font-medium text-slate-500 ml-1">in stock</span>
+                          {available} <span className="text-xs font-medium text-slate-500 ml-1">in stock</span>
                         </span>
                         <div className="flex items-center gap-2 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <span>Ord: {product.onOrder}</span>
+                          <span>Ord: {onOrder}</span>
                           <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                          <span>Min/Max: {product.min}/{product.max}</span>
+                          <span>Min/Max: {product.min || 0}/{product.max || '-'}</span>
                         </div>
                       </div>
                     </td>
 
-                    {/* Column 4: Price */}
-                    <td className="px-6 py-4 align-top text-right">
+                    {/* Column 3: Price */}
+                    <td className="px-6 py-4 align-top text-right pt-6">
                       <span className="text-sm font-black text-slate-900">
-                        ${(product.price || product.cost || 0).toFixed(2)}
+                        ${price.toFixed(2)}
                       </span>
                     </td>
 
-                    {/* Column 5: Fused Action Pill */}
-                    <td className="px-6 py-4 align-top">
+                    {/* Column 4: Fused Action Pill */}
+                    <td className="px-6 py-4 align-top pt-5">
                       <div className="flex items-center justify-end">
                         <div className="flex items-center bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400 transition-all">
                           <input
                             type="text"
-                            inputMode="numeric"
                             maxLength="4"
                             placeholder="Qty"
                             value={quantities[product.id] || ''}
@@ -207,6 +288,14 @@ export default function ProductTable({ products, quantities, handleQuantityChang
           <p className="text-sm font-medium text-slate-500 mt-1 max-w-sm">
             Adjust your search filters or check your assigned division permissions.
           </p>
+          {onRefresh && (
+            <button 
+              onClick={onRefresh}
+              className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm text-sm font-bold text-blue-600 hover:bg-slate-50 transition-colors"
+            >
+              <RefreshCw className="h-4 w-4" /> Fetch Latest Catalog
+            </button>
+          )}
         </div>
       )}
     </div>

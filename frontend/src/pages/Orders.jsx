@@ -122,7 +122,7 @@ export default function Orders() {
             </div>
             Order Operations
           </h1>
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage and track COBRA fulfillments.</p>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage and track MI-KRO fulfillments.</p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
           <div className="relative w-full sm:flex-1 lg:w-64 group">

@@ -186,7 +186,7 @@ export default function Address() {
             </div>
             Address Book
           </h1>
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage shipping destinations for downstream COBRA routing.</p>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage shipping destinations for downstream MI-KRO routing.</p>
         </div>
         
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">

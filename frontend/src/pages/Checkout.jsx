@@ -663,13 +663,13 @@ export default function Checkout() {
                 {isSubmitting ? (
                   <><Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> Processing...</>
                 ) : (
-                  <>Submit Order to COBRA <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" /></>
+                  <>Submit Order to MI-KRO <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" /></>
                 )}
               </button>
               
               <div className="mt-4 sm:mt-5 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold tracking-tight text-gray-500 uppercase text-center">
                 <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500 shrink-0" />
-                <span>Secure connection to COBRA fulfillment</span>
+                <span>Secure connection to MI-KRO Fulfillment</span>
               </div>
             </div>
           </div>

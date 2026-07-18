@@ -8,27 +8,35 @@ export default function Home() {
   
   // Extract user and active division context from Redux
   const { user } = useSelector((state) => state.auth);
-  const activeDivision = useSelector((state) => state.divisions.activeDivision);
+  const activeDivision = useSelector((state) => state.divisions?.activeDivision);
   const { items: orders, status: ordersStatus, error } = useSelector((state) => state.orders);
 
-  // Safely extract the active division ID
+  // Safely extract IDs
   const divisionId = activeDivision?._id || activeDivision;
+  const userId = user?._id || user?.id;
 
-  // FIX: Fetch fresh orders explicitly scoped to the active division context
+  // Fetch fresh orders explicitly scoped to the active user and division context
   useEffect(() => {
-    if (divisionId) {
-      dispatch(fetchOrders(divisionId));
+    if (userId) {
+      dispatch(fetchOrders({ userId, divisionId }));
     }
-  }, [dispatch, divisionId]);
+  }, [dispatch, userId, divisionId]);
 
-  // FIX: Client-side isolation to guarantee stats strictly reflect the current workspace
+  // Client-side isolation to guarantee stats strictly reflect the current workspace and user
   const scopedOrders = useMemo(() => {
-    if (!orders) return [];
+    if (!orders || !userId) return [];
+    
     return orders.filter(order => {
       const orderDivisionId = order.division?._id || order.division;
-      return orderDivisionId === divisionId;
+      const orderUserId = String(order.user?._id || order.user || '');
+      const currentUserId = String(userId);
+      
+      const isDivisionMatch = !divisionId || orderDivisionId === divisionId;
+      const isUserMatch = orderUserId === currentUserId;
+
+      return isDivisionMatch && isUserMatch;
     });
-  }, [orders, divisionId]);
+  }, [orders, divisionId, userId]);
 
   // Dynamically calculate order statistics based strictly on scoped items
   const orderStats = useMemo(() => {

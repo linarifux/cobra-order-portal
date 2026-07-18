@@ -11,13 +11,19 @@ const getAuthHeaders = () => {
   };
 };
 
-// Fetch all orders - dynamically scoped to the logged-in user's customer context
+// Fetch orders - dynamically scoped to User, Customer, or Division
 export const fetchOrders = createAsyncThunk(
   'orders/fetchOrders',
-  async (customerId, { rejectWithValue }) => {
+  async ({ customerId, divisionId, userId } = {}, { rejectWithValue }) => {
     try {
-      // Append the customer ID as a query parameter to filter operations on the backend
-      const url = customerId ? `${API_URL}/orders?customer=${customerId}` : `${API_URL}/orders`;
+      // Dynamically build query parameters based on what is provided
+      const queryParams = new URLSearchParams();
+      if (customerId) queryParams.append('customer', customerId);
+      if (divisionId) queryParams.append('division', divisionId);
+      if (userId) queryParams.append('user', userId); // Intercepted by backend to filter by shopper
+
+      const queryString = queryParams.toString();
+      const url = queryString ? `${API_URL}/orders?${queryString}` : `${API_URL}/orders`;
       
       const response = await fetch(url, { headers: getAuthHeaders() });
       const data = await response.json();

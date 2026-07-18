@@ -238,6 +238,7 @@ export default function Checkout() {
         orderNumber,
         customer: user.customer, 
         division: parsedDivisionId, 
+        user: user._id, // <--- ADDED: Explicitly bind this order to the logged-in shopper
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
@@ -268,7 +269,6 @@ export default function Checkout() {
       // =================================================================
       try {
         await Promise.all(cartItems.map(item => {
-          console.log(item)
           // Identify original stock quantities
           const currentStock = Number(item.product.unitsOnHand) || Number(item.product.available) || 0;
           const newStock = Math.max(0, currentStock - item.quantity); // Prevent negative stock

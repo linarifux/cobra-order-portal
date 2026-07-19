@@ -15,12 +15,17 @@ export default function Home() {
   const divisionId = activeDivision?._id || activeDivision;
   const userId = user?._id || user?.id;
 
+  // --- UNIFIED FRONTEND RBAC CHECK ---
+  const isPrivileged = user?.portal === 'admin' || user?.role === 'super_user';
+
   // Fetch fresh orders explicitly scoped to the active user and division context
   useEffect(() => {
     if (userId) {
-      dispatch(fetchOrders({ userId, divisionId }));
+      const fetchParams = { divisionId };
+      if (!isPrivileged) fetchParams.userId = userId;
+      dispatch(fetchOrders(fetchParams));
     }
-  }, [dispatch, userId, divisionId]);
+  }, [dispatch, userId, divisionId, isPrivileged]);
 
   // Client-side isolation to guarantee stats strictly reflect the current workspace and user
   const scopedOrders = useMemo(() => {
@@ -32,11 +37,13 @@ export default function Home() {
       const currentUserId = String(userId);
       
       const isDivisionMatch = !divisionId || orderDivisionId === divisionId;
-      const isUserMatch = orderUserId === currentUserId;
+      
+      // Bypass the strict user-ownership requirement if the account is privileged
+      const isUserMatch = isPrivileged || orderUserId === currentUserId;
 
       return isDivisionMatch && isUserMatch;
     });
-  }, [orders, divisionId, userId]);
+  }, [orders, divisionId, userId, isPrivileged]);
 
   // Dynamically calculate order statistics based strictly on scoped items
   const orderStats = useMemo(() => {

@@ -16,24 +16,42 @@ export default function Orders() {
 
   // Extract the IDs safely
   const divisionId = activeDivision?._id || activeDivision;
-  const userId = user?._id || user?.id; // Extract logged in User ID
+  const userId = user?._id || user?.id; 
 
-  // Fetch fresh orders scoped strictly to the current user
+  // --- UNIFIED FRONTEND RBAC CHECK ---
+  const isPrivileged = user?.portal === 'admin' || user?.role === 'super_user';
+
+  // Fetch fresh orders scoped to the current user OR full scope for privileged users
   useEffect(() => {
     if (userId) {
-      dispatch(fetchOrders({ userId, divisionId }));
+      const fetchParams = { divisionId };
+      
+      // If the user is NOT privileged, strictly bind the fetch request to their ID.
+      // If they ARE privileged, omit the ID so the backend returns all division orders.
+      if (!isPrivileged) {
+        fetchParams.userId = userId;
+      }
+      
+      dispatch(fetchOrders(fetchParams));
     }
-  }, [dispatch, userId, divisionId]);
+  }, [dispatch, userId, divisionId, isPrivileged]);
 
   // Sort and filter orders completely in client-side memo layer
   const filteredOrders = useMemo(() => {
     if (!orders || !userId) return [];
 
-    // Filter array to strictly guarantee that ONLY orders created by the logged-in user appear
+    // Filter array to strictly guarantee scope based on role
     const scopedOrders = orders.filter(order => {
+      const orderDivisionId = String(order.division?._id || order.division || '');
       const orderUserId = String(order.user?._id || order.user || '');
       const currentUserId = String(userId);
-      return orderUserId === currentUserId;
+      
+      const isDivisionMatch = !divisionId || orderDivisionId === String(divisionId);
+      
+      // Bypass the strict user-ownership requirement if the account is privileged
+      const isUserMatch = isPrivileged || orderUserId === currentUserId;
+
+      return isDivisionMatch && isUserMatch;
     });
 
     // Clone and sort array to guarantee most recent transactions appear at the very top
@@ -47,7 +65,7 @@ export default function Orders() {
         (order.status || '').toLowerCase().includes(query)
       );
     });
-  }, [orders, searchQuery, userId]);
+  }, [orders, searchQuery, userId, divisionId, isPrivileged]);
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -83,7 +101,7 @@ export default function Orders() {
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-4 text-blue-600 animate-in fade-in">
           <Loader2 className="h-10 w-10 animate-spin" />
-          <p className="font-bold tracking-tight text-gray-600">Syncing Your Orders...</p>
+          <p className="font-bold tracking-tight text-gray-600">Syncing Orders...</p>
         </div>
       </div>
     );
@@ -97,7 +115,7 @@ export default function Orders() {
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">Failed to load orders</h2>
           <p className="text-sm sm:text-base text-gray-500 mt-2 font-medium">{error}</p>
           <button 
-            onClick={() => userId && dispatch(fetchOrders({ userId, divisionId }))} 
+            onClick={() => userId && dispatch(fetchOrders({ userId: !isPrivileged ? userId : undefined, divisionId }))} 
             className="mt-6 rounded-xl w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2.5 text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 font-bold transition-all active:scale-95"
           >
             Try Again
@@ -123,7 +141,9 @@ export default function Orders() {
             </div>
             Order Operations
           </h1>
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">Manage and track your fulfillments.</p>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm font-medium text-gray-500 ml-11 sm:ml-14">
+            Manage and track {isPrivileged ? 'all division fulfillments' : 'your fulfillments'}.
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-2 lg:mt-0">
           <div className="relative w-full sm:flex-1 lg:w-64 group">

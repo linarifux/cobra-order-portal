@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Minus, Search, Package } from 'lucide-react';
+import { Plus, Minus, Search, Package, RefreshCw } from 'lucide-react'; 
 
 // Bulletproof internal component to handle images without getting stuck invisible
 const ProductThumbnail = ({ src, alt, sizeClass = "h-16 w-16" }) => {

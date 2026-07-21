@@ -46,7 +46,6 @@ export default function Products() {
 
       const divisionName = item.division?.divisionName || (typeof item.division === 'string' ? item.division : 'Uncategorized');
       
-      // Safely handle both populated Mongoose objects and unpopulated strings
       const cat1 = item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General');
       const cat2 = item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null);
       const cat3 = item.category3?.categoryName || (typeof item.category3 === 'string' ? item.category3 : null);
@@ -90,10 +89,13 @@ export default function Products() {
         return itemDivisionId === divisionId;
       })
       .map(item => ({
+        ...item, // Spreading item guarantees the sync logic receives DB variables like 'itemName'
         _id: item._id,
         id: item.sku || item.productCode || 'N/A', 
+        sku: item.sku || item.productCode || 'N/A', 
         image: item.productImage || item.image || null,
         desc: item.itemName || item.description || 'Unknown Item',
+        itemName: item.itemName || item.description || 'Unknown Item',
         weight: item.weight || 0,
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
@@ -103,7 +105,7 @@ export default function Products() {
         cat2: item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null),
         cat3: item.category3?.categoryName || (typeof item.category3 === 'string' ? item.category3 : null),
         displayCategory: item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General'),
-        price: item.price || 0,
+        price: item.price || item.unitCost || item.cost || 0,
         cost: item.unitCost || item.cost || item.price || 0
       }));
       
@@ -125,7 +127,6 @@ export default function Products() {
     );
   }, [items, searchQuery, activeCategory, divisionId]);
 
-  // Action Handlers
   const handleCategoryClick = (catName, path, hasChildren) => {
     setActiveCategory(catName);
     if (hasChildren) {
@@ -148,7 +149,6 @@ export default function Products() {
     }
   };
 
-  // Render States
   if (status === 'loading' || !divisionId) {
     return (
       <div className="flex h-[calc(100vh-10rem)] items-center justify-center">
@@ -207,6 +207,8 @@ export default function Products() {
           quantities={quantities}
           handleQuantityChange={handleQuantityChange}
           handleAdd={handleAdd}
+          isLoading={status === 'loading'}
+          onRefresh={() => divisionId && dispatch(fetchInventory(divisionId))}
         />
       </main>
 

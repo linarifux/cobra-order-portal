@@ -1,90 +1,189 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '../../utils/api'; 
+import { toast } from 'sonner';
 
-// Helper function to safely load division-scoped carts
-const loadCartsFromStorage = () => {
+// 1. Fetch cart from DB on login/load/division switch
+export const fetchCartDb = createAsyncThunk('cart/fetchCartDb', async (_, { getState, rejectWithValue }) => {
   try {
-    const savedCarts = localStorage.getItem('dsm_carts_by_division');
-    return savedCarts ? JSON.parse(savedCarts) : {};
+    const state = getState();
+    const divisionId = state.divisions?.activeDivision?._id || state.divisions?.activeDivision;
+    
+    // Abort if no division is selected yet
+    if (!divisionId) return [];
+
+    const response = await api.get(`/cart?division=${divisionId}`);
+    const rawItems = response.data.data.cart.items || [];
+    
+    return rawItems.map(item => {
+      const p = item.product || {};
+      return {
+        ...item,
+        product: {
+          ...p,
+          id: p._id || p.id || item.sku,
+          desc: p.itemName || p.description || item.name || 'Product',
+          image: p.productImage || p.image || null,
+          price: item.unitPrice || p.price || p.unitCost || 0,
+          weight: p.weight || 0
+        }
+      };
+    });
   } catch (error) {
-    console.warn("Failed to load carts from storage", error);
-    return {};
+    return rejectWithValue(error.response?.data?.message || 'Failed to fetch cart');
   }
-};
+});
+
+// 2. Background sync to DB
+export const syncCartDb = createAsyncThunk('cart/syncCartDb', async (_, { getState, dispatch, rejectWithValue }) => {
+  try {
+    const state = getState();
+    const cartItems = state.cart.items;
+    
+    if (!state.auth?.user) return null;
+    if (!state.cart.isInitialized) return null;
+
+    const customerId = state.auth.user.customer?._id || state.auth.user.customer || state.divisions?.activeDivision?.customer;
+    const divisionId = state.divisions?.activeDivision?._id || state.divisions?.activeDivision;
+
+    if (!customerId || !divisionId) return null;
+
+    const payload = {
+      customer: customerId,
+      division: divisionId,
+      items: cartItems.map(item => ({
+        product: item.product?._id || item.product?.id,
+        sku: item.product?.sku || 'N/A',
+        name: item.product?.itemName || item.product?.desc || 'Product',
+        quantity: Number(item.quantity) || 1,
+        unitPrice: Number(item.product?.price || item.product?.unitCost || 0)
+      }))
+    };
+
+    const response = await api.put('/cart', payload);
+    return response.data.data.cart.items;
+  } catch (error) {
+    toast.error("Failed to save cart. Restoring previous state.");
+    dispatch(fetchCartDb()); 
+    return rejectWithValue(error.response?.data?.message || 'Failed to sync cart');
+  }
+});
+
+// 3. Clear cart completely from DB
+export const clearCartDb = createAsyncThunk('cart/clearCartDb', async (_, { getState, rejectWithValue }) => {
+  try {
+    const state = getState();
+    const divisionId = state.divisions?.activeDivision?._id || state.divisions?.activeDivision;
+    
+    if (!divisionId) return [];
+
+    await api.delete(`/cart?division=${divisionId}`);
+    return [];
+  } catch (error) {
+    return rejectWithValue(error.response?.data?.message || 'Failed to clear cart');
+  }
+});
 
 const cartSlice = createSlice({
   name: 'cart',
   initialState: {
-    cartsByDivision: loadCartsFromStorage(), // Stores ALL division carts: { divId: [items], divId2: [items] }
-    items: [], // The active "viewport" array representing the current division's cart
-    activeDivisionId: null,
+    items: [],
+    status: 'idle',
+    isInitialized: false,
+    error: null,
   },
   reducers: {
-    // Fired by the Navbar whenever the user switches contexts
-    syncCartDivision: (state, action) => {
-      const divisionId = action.payload;
-      state.activeDivisionId = divisionId;
-      
-      // Initialize a blank cart for this division if one doesn't exist yet
-      if (!state.cartsByDivision[divisionId]) {
-        state.cartsByDivision[divisionId] = [];
-      }
-      
-      // Mount this division's specific array to the active items viewport
-      state.items = state.cartsByDivision[divisionId];
-    },
-    addToCart: (state, action) => {
-      const { product, quantity } = action.payload;
-      const divId = state.activeDivisionId;
-      
-      if (!divId) return; // Prevent adding items to a null boundary
+    addItemLocal: (state, action) => {
+      state.isInitialized = true; 
+      const payload = action.payload;
+      const product = payload.product ? payload.product : payload;
+      const quantity = payload.quantity !== undefined ? payload.quantity : 1;
 
-      const currentCart = state.cartsByDivision[divId];
-      const existingItem = currentCart.find(item => item.product.id === product.id);
+      const existingItem = state.items.find(
+        item => String(item.product._id || item.product.id) === String(product._id || product.id)
+      );
       
       if (existingItem) {
         existingItem.quantity += quantity;
-      } else {
-        currentCart.push({ product, quantity });
-      }
-      
-      // Keep the viewport synced
-      state.items = currentCart;
-      
-      try {
-        localStorage.setItem('dsm_carts_by_division', JSON.stringify(state.cartsByDivision));
-      } catch (err) {
-        console.error(err);
+        if (existingItem.quantity <= 0) {
+            state.items = state.items.filter(
+                item => String(item.product._id || item.product.id) !== String(product._id || product.id)
+            );
+        }
+      } else if (quantity > 0) {
+        state.items.push({ product, quantity });
       }
     },
-    removeFromCart: (state, action) => {
-      const divId = state.activeDivisionId;
-      if (!divId) return;
-
-      // Filter item out of the specific division cart
-      state.cartsByDivision[divId] = state.cartsByDivision[divId].filter(item => item.product.id !== action.payload);
-      state.items = state.cartsByDivision[divId];
-      
-      try {
-        localStorage.setItem('dsm_carts_by_division', JSON.stringify(state.cartsByDivision));
-      } catch (err) {
-        console.error(err);
+    removeItemLocal: (state, action) => {
+      const productId = action.payload;
+      state.items = state.items.filter(
+        item => String(item.product._id || item.product.id) !== String(productId)
+      );
+    },
+    updateQuantityLocal: (state, action) => {
+      const { id, quantity } = action.payload;
+      const item = state.items.find(item => String(item.product._id || item.product.id) === String(id));
+      if (item && quantity > 0) {
+        item.quantity = quantity;
+      } else if (item && quantity <= 0) {
+        state.items = state.items.filter(i => String(i.product._id || i.product.id) !== String(id));
       }
     },
-    clearCart: (state) => {
-      const divId = state.activeDivisionId;
-      if (!divId) return;
-
-      state.cartsByDivision[divId] = [];
+    clearCartLocal: (state) => {
       state.items = [];
-      
-      try {
-        localStorage.setItem('dsm_carts_by_division', JSON.stringify(state.cartsByDivision));
-      } catch (err) {
-        console.error(err);
-      }
+      state.isInitialized = false; 
+      state.status = 'idle';
     }
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCartDb.pending, (state) => { 
+        state.status = 'loading'; 
+        state.items = []; 
+        state.isInitialized = false;
+      })
+      .addCase(fetchCartDb.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.items = action.payload; 
+        state.isInitialized = true; 
+      })
+      .addCase(fetchCartDb.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
+      })
+      .addCase(clearCartDb.fulfilled, (state) => { 
+        state.items = []; 
+      });
   }
 });
 
-export const { syncCartDivision, addToCart, removeFromCart, clearCart } = cartSlice.actions;
+export const { addItemLocal, removeItemLocal, updateQuantityLocal, clearCartLocal } = cartSlice.actions;
+
+let syncTimeout = null;
+const triggerDebouncedSync = () => (dispatch) => {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    dispatch(syncCartDb());
+  }, 800); 
+};
+
+export const addToCart = (payload) => (dispatch) => {
+  dispatch(addItemLocal(payload));
+  dispatch(triggerDebouncedSync());
+};
+
+export const removeFromCart = (productId) => (dispatch) => {
+  dispatch(removeItemLocal(productId));
+  dispatch(triggerDebouncedSync());
+};
+
+export const updateQuantity = (id, quantity) => (dispatch) => {
+  dispatch(updateQuantityLocal({ id, quantity }));
+  dispatch(triggerDebouncedSync());
+};
+
+export const clearCart = () => (dispatch) => {
+  dispatch(clearCartLocal());
+  dispatch(clearCartDb());
+}
+
 export default cartSlice.reducer;

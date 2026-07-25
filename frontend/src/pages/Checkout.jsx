@@ -4,8 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; 
 import { fetchCarriers } from '../store/slices/carrierSlice'; 
-import { updateInventory } from '../store/slices/inventorySlice';
-import api from '../utils/api'; // <-- Imported centralized Axios instance
+import api from '../utils/api'; 
 import { 
   ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
@@ -60,7 +59,7 @@ export default function Checkout() {
   
   // Extract user and workspace context from Redux globally
   const { user } = useSelector(state => state.auth);
-  const activeDivision = useSelector(state => state.divisions?.activeDivision); // Safe pull from division slice
+  const activeDivision = useSelector(state => state.divisions?.activeDivision); 
   
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
@@ -238,7 +237,7 @@ export default function Checkout() {
         orderNumber,
         customer: user.customer, 
         division: parsedDivisionId, 
-        user: user._id, // <--- ADDED: Explicitly bind this order to the logged-in shopper
+        user: user._id, 
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
@@ -264,34 +263,7 @@ export default function Checkout() {
 
       await api.post('/orders', orderPayload);
 
-      // =================================================================
-      // 3. INVENTORY DEDUCTION SYNC (VIA REDUX SLICE)
-      // =================================================================
-      try {
-        await Promise.all(cartItems.map(item => {
-          // Identify original stock quantities
-          const currentStock = Number(item.product.unitsOnHand) || Number(item.product.available) || 0;
-          const newStock = Math.max(0, currentStock - item.quantity); // Prevent negative stock
-          
-          // Construct the merged payload ensuring we don't wipe out existing database fields
-          const updatedInventoryData = {
-            ...item.product,
-            unitsOnHand: newStock,
-            available: newStock 
-          };
-
-          // Dispatch the update natively through Redux to seamlessly update global state & db
-          return dispatch(updateInventory({ 
-            id: item.product._id || item.product.id, 
-            inventoryData: updatedInventoryData 
-          })).unwrap();
-        }));
-      } catch (inventoryError) {
-        console.warn('Order succeeded, but backend inventory deduction threw a warning.', inventoryError);
-      }
-      // =================================================================
-
-      // 4. Clear and Redirect
+      // 3. Clear and Redirect (Inventory deduction is now fully handled securely by the backend)
       dispatch(clearCart());
       setIsSubmitting(false);
       navigate('/orders'); 

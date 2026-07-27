@@ -117,7 +117,8 @@ export default function ProductDetails() {
 
   // Bulletproof Fallback map block safely referencing the payload keys to prevent NaN crashes
   const product = rawProduct ? {
-    id: rawProduct.sku || rawProduct.productCode || rawProduct._id,
+    sku: rawProduct.sku,
+    _id: rawProduct._id, // Retain mongo ID internally if needed elsewhere
     image: rawProduct.productImage || rawProduct.image || null,
     desc: rawProduct.itemName || rawProduct.description || rawProduct.desc || 'Unknown Item',
     category: rawProduct.cat3 || rawProduct.cat2 || rawProduct.category1?.categoryName || rawProduct.category || 'General',
@@ -143,11 +144,26 @@ export default function ProductDetails() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    
+    // Robust check: Ensure the product actually has an SKU before adding to the cart
+    if (!product.sku) {
+      toast.error("Invalid Product", { description: "Cannot add an item without a valid SKU." });
+      return;
+    }
+
     const qty = parseInt(quantity, 10);
+    
     if (qty > 0) {
-      dispatch(addToCart({ product, quantity: qty }));
+      // Overwrite the traditional Mongo '_id' with 'sku' explicitly as the identifier for the cart slice
+      const cartPayload = {
+        ...product,
+        id: product.sku
+      };
+
+      dispatch(addToCart({ product: cartPayload, quantity: qty }));
+      
       setShowSuccess(true);
-      toast.success(`Added ${qty} unit${qty > 1 ? 's' : ''} of ${product.id} to queue`);
+      toast.success(`Added to Queue`, { description: `${qty}x ${product.sku} successfully added.` });
       
       setTimeout(() => setShowSuccess(false), 3000);
       setQuantity('1'); 
@@ -174,7 +190,8 @@ export default function ProductDetails() {
         <div className="flex items-center gap-2 text-gray-400 font-semibold bg-white/30 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/40 overflow-x-auto whitespace-nowrap custom-scrollbar shrink-0">
           <Link to="/products" className="hover:text-blue-600 transition-colors">Products</Link>
           <span>/</span>
-          <span className="text-gray-900 truncate max-w-[150px] sm:max-w-none">{product.id}</span>
+          {/* Fallback to displaying SKU over Mongo ID in the breadcrumb */}
+          <span className="text-gray-900 truncate max-w-[150px] sm:max-w-none">{product.sku || 'Unknown'}</span>
         </div>
       </div>
 
@@ -227,7 +244,7 @@ export default function ProductDetails() {
               </h1>
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm">
                 <span className="font-mono font-bold text-gray-600 bg-white/50 border border-white/80 shadow-sm px-3 py-1.5 rounded-lg">
-                  SKU: {product.id}
+                  SKU: {product.sku || 'N/A'}
                 </span>
                 <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold border shadow-sm ${product.available > 0 ? 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50' : 'bg-red-50/80 text-red-700 border-red-200/50'}`}>
                   {product.available > 0 ? <><CheckCircle2 className="h-4 w-4" /> In Stock</> : <><AlertCircle className="h-4 w-4" /> Out of Stock</>}
@@ -251,13 +268,6 @@ export default function ProductDetails() {
                 </div>
                 <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">{product.min} <span className="text-gray-400 font-semibold text-sm sm:text-lg">/ {product.max}</span></p>
               </div>
-              {/* <div className="p-4 sm:p-5 rounded-2xl bg-white/50 border border-white/60 shadow-sm hover:bg-white/70 transition-colors">
-                <div className="flex items-center gap-1.5 sm:gap-2 text-gray-500 mb-1.5 sm:mb-2">
-                  <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                  <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">On Order</span>
-                </div>
-                <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">{product.onOrder}</p>
-              </div> */}
               <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-tr from-blue-50/80 to-indigo-50/80 border border-blue-100/50 shadow-sm">
                 <div className="flex items-center gap-1.5 sm:gap-2 text-blue-600 mb-1.5 sm:mb-2">
                   <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
@@ -286,7 +296,7 @@ export default function ProductDetails() {
               </div>
               <button 
                 onClick={handleAddToCart}
-                disabled={!quantity || Number(quantity) < 1}
+                disabled={!quantity || Number(quantity) < 1 || !product.sku}
                 className="w-full sm:flex-1 h-12 sm:h-14 flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 focus:ring-4 focus:ring-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none transition-all active:scale-[0.98]"
               >
                 {showSuccess ? (

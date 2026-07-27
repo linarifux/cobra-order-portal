@@ -579,10 +579,12 @@ export default function Checkout() {
                 {cartItems.length} Unique Items
               </span>
             </div>
-            
+            {console.log('checkout page', cartItems)}
             {/* Items List */}
+            
             <div className="max-h-[250px] sm:max-h-[350px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {cartItems.map((item) => (
+                
                 <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl overflow-hidden border border-white/80 bg-white/50 flex flex-shrink-0 items-center justify-center shadow-inner relative z-10">
                     <CheckoutItemImage src={item.product?.image || item.product?.productImage} alt={item.product?.desc} />

@@ -34,10 +34,13 @@ export default function Products() {
     }
   }, [dispatch, divisionId]);
 
+  console.log(items)
+
   // Derive Nested Categories with defensive Object/String checks
   const dynamicCategories = useMemo(() => {
     if (!Array.isArray(items)) return [];
 
+    
     const categoryMap = {};
     
     items.forEach(item => {
@@ -143,6 +146,7 @@ export default function Products() {
   const handleAdd = (product) => {
     const qty = parseInt(quantities[product.id] || 0, 10);
     if (qty > 0) {
+      console.log(product)
       dispatch(addToCart({ product, quantity: qty }));
       setQuantities(prev => ({ ...prev, [product.id]: '' }));
       toast.success(`Added ${qty} unit${qty > 1 ? 's' : ''} to order queue`);

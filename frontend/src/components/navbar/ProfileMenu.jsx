@@ -74,6 +74,7 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
               {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Authorized User'}
             </p>
             <p className="text-[10px] font-bold text-slate-500 truncate mt-1 uppercase tracking-widest">{user?.email || 'user@example.com'}</p>
+            <p className="text-[8px] bg-gray-300 p-1 rounded inline font-bold text-slate-500 truncate mt-1 uppercase tracking-widest">{user?.chargeCode || 'No Charge Code'}</p>
           </div>
 
           {availableDivisions.length > 0 && (

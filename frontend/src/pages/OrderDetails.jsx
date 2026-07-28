@@ -5,7 +5,7 @@ import { fetchOrderById, clearCurrentOrder } from '../store/slices/orderSlice';
 import { 
   ArrowLeft, Package, MapPin, Truck, FileText, 
   Loader2, AlertCircle, Calendar, CreditCard, ExternalLink,
-  CheckCircle2, Mail, Phone, Clock, Weight // <-- Added Weight icon
+  CheckCircle2, Mail, Phone, Clock, Weight, Briefcase // <-- Added Briefcase icon
 } from 'lucide-react';
 
 // Utility to generate dynamic tracking links based on carrier name
@@ -137,6 +137,11 @@ export default function OrderDetails() {
               <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
                 {order.status}
               </span>
+              {order.chargeCode && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 border border-amber-200 text-amber-800 rounded-lg text-[10px] sm:text-[11px] font-black tracking-widest shadow-sm transition-all duration-300">
+                  <Briefcase size={12} /> {order.chargeCode}
+                </span>
+              )}
             </div>
             <p className="text-xs sm:text-sm font-medium text-gray-500 mt-1 sm:mt-1.5 flex items-center gap-1.5 sm:gap-2">
               <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" /> Placed on {formatDate(order.createdAt)}

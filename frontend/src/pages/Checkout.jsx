@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
-import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice'; 
-import { fetchCarriers } from '../store/slices/carrierSlice'; 
-import api from '../utils/api'; 
-import { 
-  ArrowLeft, ArrowRight, ShoppingBag, MapPin, 
-  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle
+import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice';
+import { fetchCarriers } from '../store/slices/carrierSlice';
+import api from '../utils/api';
+import {
+  ArrowLeft, ArrowRight, ShoppingBag, MapPin,
+  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase
 } from 'lucide-react';
 
 // Robust internal component to handle checkout image loading and error fallbacks
@@ -35,9 +35,8 @@ const CheckoutItemImage = ({ src, alt }) => {
         alt={alt || 'Product image'}
         onLoad={() => setIsLoaded(true)}
         onError={() => setHasError(true)}
-        className={`h-full w-full object-cover transition-opacity duration-300 ${
-          isLoaded ? 'opacity-100' : 'opacity-0'
-        }`}
+        className={`h-full w-full object-cover transition-opacity duration-300 ${isLoaded ? 'opacity-100' : 'opacity-0'
+          }`}
       />
     </div>
   );
@@ -56,36 +55,44 @@ const generateOrderNumber = () => {
 export default function Checkout() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  
+
   // Extract user and workspace context from Redux globally
   const { user } = useSelector(state => state.auth);
-  const activeDivision = useSelector(state => state.divisions?.activeDivision); 
-  
+  const activeDivision = useSelector(state => state.divisions?.activeDivision);
+
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
-  const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers); 
-  
+  const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers);
+
   // Checkout Form State
   const [selectedAddressId, setSelectedAddressId] = useState('');
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
   const [saveToAddressBook, setSaveToAddressBook] = useState(false);
-  
+
   // Shipping Method State
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShippingMethod, setSelectedShippingMethod] = useState('');
 
   // Order Details
   const [orderNumber] = useState(generateOrderNumber());
-  const [poNumber, setPoNumber] = useState(''); 
+  const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
-  
+  const [chargeCode, setChargeCode] = useState(''); // NEW: Charge Code State
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
 
   // Determine the active division ID safely
   const activeDivisionId = activeDivision?._id || localStorage.getItem('dsm_active_division') || user?.divisions?.[0];
   const parsedDivisionId = typeof activeDivisionId === 'object' ? activeDivisionId._id : activeDivisionId;
+
+  // Auto-populate charge code if the user profile has one
+  useEffect(() => {
+    if (user?.chargeCode) {
+      setChargeCode(user.chargeCode);
+    }
+  }, [user]);
 
   // 1. Fetch Addresses scoped dynamically to the logged-in User's ID
   useEffect(() => {
@@ -105,7 +112,7 @@ export default function Checkout() {
   useEffect(() => {
     if (carrierStatus === 'succeeded' && carriers) {
       const flattenedOptions = [];
-      
+
       if (Array.isArray(carriers)) {
         carriers.forEach(carrier => {
           if (carrier.isActive && carrier.enabledServices) {
@@ -124,7 +131,7 @@ export default function Checkout() {
       }
 
       setShippingOptions(flattenedOptions);
-      
+
       if (flattenedOptions.length > 0) {
         setSelectedShippingMethod(flattenedOptions[0].code);
       }
@@ -134,7 +141,7 @@ export default function Checkout() {
   const handleAddressSelect = (e) => {
     const id = e.target.value;
     setSelectedAddressId(id);
-    
+
     if (id) {
       const addr = addresses.find(a => a._id === id);
       if (addr) {
@@ -174,7 +181,7 @@ export default function Checkout() {
   };
 
   const subtotal = cartItems.reduce((acc, item) => acc + (getProductPrice(item.product) * item.quantity), 0);
-  const shipping = 0; 
+  const shipping = 0;
   const total = subtotal + shipping;
 
   const totalWeightInOunces = cartItems.reduce((acc, item) => {
@@ -207,18 +214,18 @@ export default function Checkout() {
     try {
       // 1. Create/Save Address if selected
       if (!finalAddressId && saveToAddressBook) {
-        const payload = { 
-          ...addressForm, 
-          user: user._id, // Assigning to the User model
-          addressType: 'Shipping', 
-          isDefault: false 
+        const payload = {
+          ...addressForm,
+          user: user._id,
+          addressType: 'Shipping',
+          isDefault: false
         };
         const savedAddress = await dispatch(createAddress(payload)).unwrap();
         finalAddressId = savedAddress._id;
       }
 
       const selectedOption = shippingOptions.find(opt => opt.code === selectedShippingMethod);
-      
+
       const formattedItems = cartItems.map(item => {
         const unitPrice = getProductPrice(item.product);
         return {
@@ -235,9 +242,10 @@ export default function Checkout() {
       // 2. Submit the Order payload via the centralized Axios api
       const orderPayload = {
         orderNumber,
-        customer: user.customer, 
-        division: parsedDivisionId, 
-        user: user._id, 
+        customer: user.customer,
+        division: parsedDivisionId,
+        user: user._id,
+        chargeCode: chargeCode.trim(), // Inject Charge Code
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
@@ -263,11 +271,11 @@ export default function Checkout() {
 
       await api.post('/orders', orderPayload);
 
-      // 3. Clear and Redirect (Inventory deduction is now fully handled securely by the backend)
+      // 3. Clear and Redirect
       dispatch(clearCart());
       setIsSubmitting(false);
-      navigate('/orders'); 
-      
+      navigate('/orders');
+
     } catch (err) {
       console.error('Failed to submit order:', err);
       // Safely extract Axios error message if it exists
@@ -311,13 +319,13 @@ export default function Checkout() {
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-5 sm:space-y-6 animate-in fade-in duration-700 px-4 xl:px-0 pb-12">
-      
+
       {/* Subtle Background Orbs */}
       <div className="absolute top-10 left-0 w-48 h-48 sm:w-72 sm:h-72 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute top-60 right-0 w-48 h-48 sm:w-72 sm:h-72 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
 
       <div className="flex items-start sm:items-center gap-3 sm:gap-5 pb-2">
-        <button 
+        <button
           onClick={() => navigate('/products')}
           className="mt-0.5 sm:mt-0 flex-shrink-0 flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)]"
         >
@@ -330,10 +338,10 @@ export default function Checkout() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        
+
         {/* Left Column: Form Details */}
         <div className="flex-1 space-y-5 sm:space-y-6 lg:space-y-8">
-          
+
           {/* Shipping Section */}
           <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden relative">
             <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30 z-10">
@@ -342,7 +350,7 @@ export default function Checkout() {
               </div>
               <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Shipping Information</h2>
             </div>
-            
+
             <div className="p-5 sm:p-8">
               {formError && (
                 <div className="p-4 bg-red-50/80 backdrop-blur-md border border-red-200/50 text-red-700 text-sm font-medium rounded-xl sm:rounded-2xl mb-6 sm:mb-8 flex items-start gap-3 shadow-sm">
@@ -437,11 +445,12 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-4 sm:gap-5">
+                {/* Country Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
                     <div className="relative">
-                      <select name="country" value={addressForm.country} onChange={handleInputChange} className={`${premiumInputClass} appearance-none`}>
+                      <select name="country" value={addressForm.country} onChange={handleInputChange} className={`${premiumInputClass} appearance-none cursor-pointer`}>
                         <option value="USA">United States</option>
                         <option value="Canada">Canada</option>
                         {addressForm.country !== 'USA' && addressForm.country !== 'Canada' && addressForm.country !== '' && (
@@ -453,17 +462,18 @@ export default function Checkout() {
                       </div>
                     </div>
                   </div>
+
                 </div>
 
                 {!selectedAddressId && (
                   <div className="pt-4 sm:pt-6 pb-2">
                     <label className="flex items-center gap-3 cursor-pointer group w-max">
                       <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg border transition-all duration-300 ${saveToAddressBook ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/50 border-white/80 group-hover:border-blue-500 group-hover:bg-white'}`}>
-                        <input 
-                          type="checkbox" 
-                          checked={saveToAddressBook} 
+                        <input
+                          type="checkbox"
+                          checked={saveToAddressBook}
                           onChange={(e) => setSaveToAddressBook(e.target.checked)}
-                          className="sr-only"
+                          className="sr-only px-8"
                         />
                         {saveToAddressBook && <Check className="h-3 w-3 sm:h-4 sm:w-4 text-white" />}
                       </div>
@@ -475,6 +485,24 @@ export default function Checkout() {
             </div>
           </section>
 
+          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-5 sm:p-8">
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
+                Charge Code <span className="text-gray-400 font-medium normal-case tracking-normal">(Optional)</span>
+              </label>
+              <div className="relative">
+                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={chargeCode}
+                  onChange={(e) => setChargeCode(e.target.value)}
+                  className={`${premiumInputClass} font-mono uppercase !pl-11`}
+                  placeholder="e.g. CHG-90210"
+                />
+              </div>
+            </div>
+          </section>
+          
           {/* Shipping Method Section */}
           <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
             <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30">
@@ -483,15 +511,15 @@ export default function Checkout() {
               </div>
               <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Shipping Method</h2>
             </div>
-            
+
             <div className="p-5 sm:p-8">
-              
+
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
                 <div className="w-full">
                   <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1">
                     Select Service <span className="text-red-500">*</span>
                   </label>
-                  
+
                   {shippingOptions.length > 0 ? (
                     <div className="relative">
                       <select
@@ -570,7 +598,7 @@ export default function Checkout() {
         {/* Right Column: Order Summary */}
         <div className="w-full lg:w-[420px] flex-shrink-0">
           <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] lg:sticky lg:top-28 overflow-hidden">
-            
+
             {/* Header */}
             <div className="p-5 sm:p-6 bg-gradient-to-br from-slate-900 to-gray-900 text-white flex items-center justify-between shadow-inner relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
@@ -579,12 +607,12 @@ export default function Checkout() {
                 {cartItems.length} Unique Items
               </span>
             </div>
-            {console.log('checkout page', cartItems)}
+
             {/* Items List */}
-            
+
             <div className="max-h-[250px] sm:max-h-[350px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {cartItems.map((item) => (
-                
+
                 <div key={item.product.id} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
                   <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl overflow-hidden border border-white/80 bg-white/50 flex flex-shrink-0 items-center justify-center shadow-inner relative z-10">
                     <CheckoutItemImage src={item.product?.image || item.product?.productImage} alt={item.product?.desc} />
@@ -628,7 +656,7 @@ export default function Checkout() {
 
             {/* Submit Action */}
             <div className="p-5 sm:p-6 pt-0 bg-white/40">
-              <button 
+              <button
                 type="button"
                 onClick={handlePlaceOrder}
                 disabled={isSubmitting || carrierStatus === 'loading' || shippingOptions.length === 0}
@@ -640,7 +668,7 @@ export default function Checkout() {
                   <>Submit Order to MI-KRO <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" /></>
                 )}
               </button>
-              
+
               <div className="mt-4 sm:mt-5 flex items-center justify-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold tracking-tight text-gray-500 uppercase text-center">
                 <ShieldCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500 shrink-0" />
                 <span>Secure connection to MI-KRO Fulfillment</span>

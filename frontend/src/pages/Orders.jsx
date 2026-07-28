@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Download, Loader2, AlertCircle, Search, ClipboardList } from 'lucide-react';
+import { Download, Loader2, AlertCircle, Search, ClipboardList, Briefcase } from 'lucide-react';
 import { fetchOrders } from '../store/slices/orderSlice';
 
 export default function Orders() {
@@ -190,10 +190,22 @@ export default function Orders() {
                 </div>
               </div>
               
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Recipient Destination</p>
-                <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
-                <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Recipient Destination</p>
+                  <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
+                  <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Charge Code</p>
+                  {order.chargeCode ? (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-[10px] font-bold tracking-widest shadow-sm">
+                      <Briefcase size={12} className="text-slate-400" /> {order.chargeCode}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 font-medium italic">Not Set</span>
+                  )}
+                </div>
               </div>
             </div>
           ))
@@ -217,6 +229,7 @@ export default function Orders() {
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Order ID</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Date</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Recipient</th>
+                <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Charge Code</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Total</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Status</th>
               </tr>
@@ -240,6 +253,15 @@ export default function Orders() {
                       <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
                       <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
                     </td>
+                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
+                      {order.chargeCode ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold tracking-widest shadow-sm">
+                          <Briefcase size={12} className="text-slate-400" /> {order.chargeCode}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400 font-medium italic">Not Set</span>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
                       {formatMoney(order.totalAmount)}
                     </td>
@@ -252,7 +274,7 @@ export default function Orders() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" className="px-6 lg:px-8 py-16 lg:py-20 text-center">
+                  <td colSpan="6" className="px-6 lg:px-8 py-16 lg:py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="h-16 w-16 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
                         <ClipboardList className="h-8 w-8 text-gray-400" />

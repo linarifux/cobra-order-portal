@@ -18,13 +18,15 @@ export const fetchCartDb = createAsyncThunk('cart/fetchCartDb', async (_, { getS
       const p = item.product || {};
       return {
         ...item,
+        qtyLimitExceeds: item.qtyLimitExceeds || false, // Ensure the flag carries over
         product: {
           ...p,
           id: p._id || p.id || item.sku,
           desc: p.itemName || p.description || item.name || 'Product',
           image: p.productImage || p.image || null,
           price: item.unitPrice || p.price || p.unitCost || 0,
-          weight: p.weight || 0
+          weight: p.weight || 0,
+          max: p.max || 0 // Ensure max is populated for local recalculations
         }
       };
     });
@@ -55,7 +57,8 @@ export const syncCartDb = createAsyncThunk('cart/syncCartDb', async (_, { getSta
         sku: item.product?.sku || 'N/A',
         name: item.product?.itemName || item.product?.desc || 'Product',
         quantity: Number(item.quantity) || 1,
-        unitPrice: Number(item.product?.price || item.product?.unitCost || 0)
+        unitPrice: Number(item.product?.price || item.product?.unitCost || 0),
+        qtyLimitExceeds: item.qtyLimitExceeds || false // Include limit flag in DB sync
       }))
     };
 
@@ -97,20 +100,29 @@ const cartSlice = createSlice({
       const payload = action.payload;
       const product = payload.product ? payload.product : payload;
       const quantity = payload.quantity !== undefined ? payload.quantity : 1;
-
+      
       const existingItem = state.items.find(
         item => String(item.product._id || item.product.id) === String(product._id || product.id)
       );
       
       if (existingItem) {
         existingItem.quantity += quantity;
+        
+        // Auto-recalculate if the new combined quantity exceeds the max threshold
+        const maxLimit = Number(existingItem.product.max) || 0;
+        existingItem.qtyLimitExceeds = maxLimit > 0 && existingItem.quantity > maxLimit;
+
         if (existingItem.quantity <= 0) {
             state.items = state.items.filter(
                 item => String(item.product._id || item.product.id) !== String(product._id || product.id)
             );
         }
       } else if (quantity > 0) {
-        state.items.push({ product, quantity });
+        // Evaluate for new item insertions
+        const maxLimit = Number(product.max) || 0;
+        const qtyLimitExceeds = payload.qtyLimitExceeds || (maxLimit > 0 && quantity > maxLimit);
+        
+        state.items.push({ product, quantity, qtyLimitExceeds });
       }
     },
     removeItemLocal: (state, action) => {
@@ -122,8 +134,12 @@ const cartSlice = createSlice({
     updateQuantityLocal: (state, action) => {
       const { id, quantity } = action.payload;
       const item = state.items.find(item => String(item.product._id || item.product.id) === String(id));
+      
       if (item && quantity > 0) {
         item.quantity = quantity;
+        // Auto-recalculate flag on direct quantity updates
+        const maxLimit = Number(item.product.max) || 0;
+        item.qtyLimitExceeds = maxLimit > 0 && quantity > maxLimit;
       } else if (item && quantity <= 0) {
         state.items = state.items.filter(i => String(i.product._id || i.product.id) !== String(id));
       }

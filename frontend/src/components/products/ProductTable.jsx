@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Minus, Search, Package, RefreshCw } from 'lucide-react'; 
+import { Plus, Minus, Search, Package, RefreshCw, AlertTriangle } from 'lucide-react'; 
+import {AnimatePresence, motion } from 'framer-motion';
 
 // Bulletproof internal component to handle images without getting stuck invisible
 const ProductThumbnail = ({ src, alt, sizeClass = "h-16 w-16" }) => {
@@ -115,6 +116,11 @@ export default function ProductTable({
               const price = Number(product.price || product.cost || 0);
               const available = Number(product.available || product.unitsOnHand || 0);
               const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
+              
+              // Max limit warning check
+              const currentQty = Number(quantities[product.id]) || 0;
+              const maxLimit = Number(product.max) || 0;
+              const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
 
               return (
                 <div key={product.id || product._id} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
@@ -153,26 +159,43 @@ export default function ProductTable({
                     <span><strong className="text-slate-800">{onOrder}</strong> on order</span>
                   </div>
 
-                  {/* Action Pill (Full Width) */}
-                  <div className="flex items-center bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden h-12 w-full focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400 transition-all">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength="4"
-                      placeholder="Qty"
-                      value={quantities[product.id] || ''}
-                      onChange={(e) => handleQuantityChange(product.id, e.target.value)}
-                      className="w-20 h-full px-2 text-center text-sm font-black text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 placeholder:font-semibold"
-                    />
-                    <div className="h-6 w-px bg-slate-200 shrink-0"></div>
-                    <button 
-                      onClick={() => handleAdd(product)}
-                      disabled={!quantities[product.id] || quantities[product.id] === '0'}
-                      className="flex-1 flex items-center justify-center gap-2 h-full bg-slate-50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors font-bold text-sm uppercase tracking-widest"
-                    >
-                      <Plus className="h-4 w-4 stroke-[2.5]" /> Add
-                    </button>
+                  {/* Action Pill (Full Width) & Warning */}
+                  <div className="flex flex-col gap-1.5 w-full">
+                    <div className={`flex items-center bg-white border ${isExceedingMax ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden h-12 w-full transition-all`}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="4"
+                        placeholder="Qty"
+                        value={quantities[product.id] || ''}
+                        onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                        className="w-20 h-full px-2 text-center text-sm font-black text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 placeholder:font-semibold"
+                      />
+                      <div className="h-6 w-px bg-slate-200 shrink-0"></div>
+                      <button 
+                        onClick={() => handleAdd(product)}
+                        disabled={!quantities[product.id] || quantities[product.id] === '0'}
+                        className="flex-1 flex items-center justify-center gap-2 h-full bg-slate-50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors font-bold text-sm uppercase tracking-widest"
+                      >
+                        <Plus className="h-4 w-4 stroke-[2.5]" /> Add
+                      </button>
+                    </div>
+                    
+                    {/* Max Limit Warning */}
+                    <AnimatePresence>
+                      {isExceedingMax && (
+                        <motion.p 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1 mt-0.5"
+                        >
+                          <AlertTriangle size={12} /> Limit exceeded ({maxLimit}). Requires approval.
+                        </motion.p>
+                      )}
+                    </AnimatePresence>
                   </div>
+
                 </div>
               );
             })}
@@ -195,6 +218,11 @@ export default function ProductTable({
                 const price = Number(product.price || product.cost || 0);
                 const available = Number(product.available || product.unitsOnHand || 0);
                 const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
+                
+                // Max limit warning check
+                const currentQty = Number(quantities[product.id]) || 0;
+                const maxLimit = Number(product.max) || 0;
+                const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
 
                 return (
                   <tr key={product.id || product._id} className="hover:bg-white/60 transition-colors duration-200 group">
@@ -247,10 +275,10 @@ export default function ProductTable({
                       </span>
                     </td>
 
-                    {/* Column 4: Fused Action Pill */}
+                    {/* Column 4: Action Pill & Warning */}
                     <td className="px-6 py-4 align-top pt-5">
-                      <div className="flex items-center justify-end">
-                        <div className="flex items-center bg-white border border-slate-200/80 rounded-xl shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400 transition-all">
+                      <div className="flex flex-col items-end gap-1.5">
+                        <div className={`flex items-center bg-white border ${isExceedingMax ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden transition-all w-max`}>
                           <input
                             type="text"
                             maxLength="4"
@@ -269,6 +297,20 @@ export default function ProductTable({
                             <Plus className="h-5 w-5 stroke-[2.5]" />
                           </button>
                         </div>
+
+                        {/* Max Limit Warning */}
+                        <AnimatePresence>
+                          {isExceedingMax && (
+                            <motion.p 
+                              initial={{ opacity: 0, y: -5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -5 }}
+                              className="text-[9px] font-bold text-amber-600 flex items-center justify-end gap-1 pr-1"
+                            >
+                              <AlertTriangle size={10} /> Limit exceeded ({maxLimit}). Requires approval.
+                            </motion.p>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </td>
 

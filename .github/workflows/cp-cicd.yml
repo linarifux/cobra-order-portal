@@ -18,7 +18,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies and build
-        working-directory: ./frontend    # <-- Added this back
+        working-directory: ./frontend   
         env:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: |
@@ -33,7 +33,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Sync to S3 Bucket
-        working-directory: ./frontend    # <-- Added this back
+        working-directory: ./frontend  
         run: aws s3 sync dist/ s3://${{ secrets.AWS_S3_CP_BUCKET }} --delete
 
       - name: Invalidate CloudFront Cache

@@ -145,9 +145,14 @@ export default function Products() {
 
   const handleAdd = (product) => {
     const qty = parseInt(quantities[product.id] || 0, 10);
+    
+    // Evaluate if the entered quantity exceeds the product's maximum limit
+    const maxLimit = Number(product.max) || 0;
+    const qtyLimitExceeds = maxLimit > 0 && qty > maxLimit;
+
     if (qty > 0) {
-      console.log(product)
-      dispatch(addToCart({ product, quantity: qty }));
+      // Dispatch the flag into the cart payload
+      dispatch(addToCart({ product, quantity: qty, qtyLimitExceeds }));
       setQuantities(prev => ({ ...prev, [product.id]: '' }));
       toast.success(`Added ${qty} unit${qty > 1 ? 's' : ''} to order queue`);
     }

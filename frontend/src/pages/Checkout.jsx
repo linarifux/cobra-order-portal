@@ -62,6 +62,8 @@ export default function Checkout() {
 
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
+
+  console.log(cartItems)
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
   const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers);
 
@@ -229,7 +231,7 @@ export default function Checkout() {
       const formattedItems = cartItems.map(item => {
         const unitPrice = getProductPrice(item.product);
         return {
-          sku: item.product.id || item.product.sku,
+          sku: item.product.sku,
           name: item.product.desc,
           quantity: item.quantity,
           unitPrice: unitPrice,
@@ -249,6 +251,7 @@ export default function Checkout() {
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
+        qtyLimitExceeds: cartItems.some(item => item.qtyLimitExceeds), // Evaluates if any item in cart exceeds its threshold
         shippingAddress: {
           recipientName: `${addressForm.firstName} ${addressForm.lastName}`.trim(),
           email: addressForm.contactEmail,

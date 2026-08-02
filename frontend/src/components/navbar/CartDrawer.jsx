@@ -122,7 +122,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                 <ul className="space-y-3 sm:space-y-4">
                   <AnimatePresence mode='popLayout'>
                     {cartItems.map((item) => (
-                      <CartItem key={item?.product?.id || item?.product?._id} item={item} />
+                      <CartItem key={item?.product?.sku} item={item} />
                     ))}
                   </AnimatePresence>
                 </ul>

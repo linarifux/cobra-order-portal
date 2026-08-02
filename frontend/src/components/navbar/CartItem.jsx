@@ -39,7 +39,7 @@ const CartItemImage = ({ src, alt }) => {
 export default function CartItem({ item }) {
   
   const dispatch = useDispatch();
-  const targetId = item?.product?.id || item?.product?._id;
+  const targetId = item?.product?.sku;
   const getProductPrice = (product) => Number(product?.price || product?.unitCost || product?.cost || 0);
 
   const handleUpdateQuantity = (delta) => {

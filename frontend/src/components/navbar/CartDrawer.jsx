@@ -22,7 +22,10 @@ export default function CartDrawer({ isOpen, onClose }) {
     const itemOunces = Number(item.product?.weight) || 0;
     return acc + (itemOunces * item.quantity);
   }, 0);
-  const totalWeightInLbs = (totalWeightInOunces / 16).toFixed(2);
+  
+  // Calculate separated lbs and oz
+  const totalWeightLbs = Math.floor(totalWeightInOunces / 16);
+  const totalWeightOz = +(totalWeightInOunces % 16).toFixed(2); // Using + drops unnecessary trailing zeros
 
   const handleGoToCheckout = () => {
     onClose();
@@ -136,7 +139,7 @@ export default function CartDrawer({ isOpen, onClose }) {
                   </div>
                   <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                     <span className="flex items-center gap-1.5"><Weight size={14} /> Est. Total Weight</span>
-                    <span className="text-slate-900">{totalWeightInLbs} lbs</span>
+                    <span className="text-slate-900">{totalWeightLbs} lb {totalWeightOz} oz</span>
                   </div>
                   <div className="flex justify-between items-center text-xs sm:text-sm font-bold text-slate-500">
                     <span>Est. Taxes & Shipping</span>

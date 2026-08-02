@@ -172,6 +172,10 @@ export default function ProductDetails() {
 
   if (!product) return null;
 
+  // Convert the total weight mapped above back into separated display integers
+  const weightLbs = Math.floor(product.weight / 16);
+  const weightOz = product.weight % 16;
+
   return (
     <div className="relative max-w-5xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-700 px-4 sm:px-0 pb-12 pt-6">
       
@@ -218,7 +222,7 @@ export default function ProductDetails() {
             <div className="flex justify-between items-center text-sm">
               <span className="flex items-center gap-2 text-gray-500 font-semibold"><Weight className="h-4 w-4"/> Unit Weight</span>
               <span className="font-mono font-bold text-gray-900 bg-white/50 px-2 py-1 rounded border border-white/60 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none text-right">
-                {product.weight} oz
+                {weightLbs} lb {weightOz} oz
               </span>
             </div>
             <div className="flex justify-between items-center text-sm border-t border-white/50 pt-4">

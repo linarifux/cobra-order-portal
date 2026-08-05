@@ -5,7 +5,7 @@ import { fetchOrderById, clearCurrentOrder } from '../store/slices/orderSlice';
 import { 
   ArrowLeft, Package, MapPin, Truck, FileText, 
   Loader2, AlertCircle, Calendar, CreditCard, ExternalLink,
-  CheckCircle2, Mail, Phone, Clock, Weight, Briefcase // <-- Added Briefcase icon
+  CheckCircle2, Mail, Phone, Clock, Weight, Briefcase
 } from 'lucide-react';
 
 // Utility to generate dynamic tracking links based on carrier name
@@ -106,12 +106,13 @@ export default function OrderDetails() {
 
   // --- Safely calculate total order weight ---
   // Falls back to manually summing the items if the API didn't provide `totalWeightOunces` on the root order
-  const totalWeightInOunces = order.totalWeightOunces || order.items?.reduce((acc, item) => {
+  const totalWeightInOunces = order.shippingDetails?.totalWeightOunces || order.items?.reduce((acc, item) => {
     const w = Number(item.weight) || Number(item.product?.weight) || 0;
     return acc + (w * item.quantity);
   }, 0);
   
-  const totalWeightInLbs = totalWeightInOunces ? (totalWeightInOunces / 16).toFixed(2) : 0;
+  const totalWeightLbs = Math.floor(totalWeightInOunces / 16);
+  const totalWeightOz = +(totalWeightInOunces % 16).toFixed(1);
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 px-4 lg:px-0 pb-12">
@@ -335,6 +336,8 @@ export default function OrderDetails() {
               {order.items?.map((item, index) => {
                 // Support both populated item.product and flat item structures
                 const itemOunces = (Number(item.weight) || Number(item.product?.weight) || 0) * item.quantity;
+                const itemLbs = Math.floor(itemOunces / 16);
+                const itemRemOz = +(itemOunces % 16).toFixed(1);
                 
                 return (
                   <div key={index} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
@@ -358,7 +361,9 @@ export default function OrderDetails() {
                           {/* Item Weight Badge */}
                           {itemOunces > 0 && (
                             <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 bg-gray-50 border border-gray-200 shadow-sm px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Weight size={10} /> {itemOunces} oz
+                              <Weight size={10} /> 
+                              {itemLbs > 0 && <span>{itemLbs} <span className="text-[8px] uppercase">lb</span></span>}
+                              {itemRemOz > 0 && <span>{itemRemOz} <span className="text-[8px] uppercase">oz</span></span>}
                             </span>
                           )}
                         </div>
@@ -383,10 +388,13 @@ export default function OrderDetails() {
               </div>
               
               {/* Total Order Weight */}
-              {totalWeightInLbs > 0 && (
-                <div className="flex justify-between items-center text-gray-600 font-medium">
-                  <span className="flex items-center gap-1.5"><Weight size={14} className="text-gray-400" /> Total Weight</span>
-                  <span className="font-bold text-gray-900">{totalWeightInLbs} lbs</span>
+              {totalWeightInOunces > 0 && (
+                <div className="flex justify-between items-center text-gray-600 font-medium py-1">
+                  <span className="flex items-center gap-1.5"><Weight size={14} className="text-gray-400" /> Total Est. Weight</span>
+                  <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                    {totalWeightLbs > 0 && <span>{totalWeightLbs} <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">lb</span></span>}
+                    {(totalWeightOz > 0 || totalWeightLbs === 0) && <span>{totalWeightOz} <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">oz</span></span>}
+                  </div>
                 </div>
               )}
 

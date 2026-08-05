@@ -7,7 +7,7 @@ import { fetchCarriers } from '../store/slices/carrierSlice';
 import api from '../utils/api';
 import {
   ArrowLeft, ArrowRight, ShoppingBag, MapPin,
-  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase
+  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase, Globe, AlertTriangle
 } from 'lucide-react';
 
 // Robust internal component to handle checkout image loading and error fallbacks
@@ -43,7 +43,7 @@ const CheckoutItemImage = ({ src, alt }) => {
 };
 
 const EMPTY_ADDRESS_FORM = {
-  firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'USA', contactPhone: '', contactEmail: ''
+  firstName: '', lastName: '', company: '', street1: '', street2: '', city: '', state: '', zipCode: '', country: 'US', contactPhone: '', contactEmail: ''
 };
 
 const generateOrderNumber = () => {
@@ -63,7 +63,6 @@ export default function Checkout() {
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
 
-  console.log(cartItems)
   const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
   const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers);
 
@@ -80,7 +79,9 @@ export default function Checkout() {
   const [orderNumber] = useState(generateOrderNumber());
   const [poNumber, setPoNumber] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
-  const [chargeCode, setChargeCode] = useState(''); // NEW: Charge Code State
+  const [chargeCode, setChargeCode] = useState(''); 
+  const [isRushOrder, setIsRushOrder] = useState(false);
+  const [isInternational, setIsInternational] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -147,8 +148,8 @@ export default function Checkout() {
     if (id) {
       const addr = addresses.find(a => a._id === id);
       if (addr) {
-        let dbCountry = addr.country || 'USA';
-        if (dbCountry === 'United States') dbCountry = 'USA';
+        let dbCountry = addr.country || 'US';
+        if (dbCountry === 'United States' || dbCountry === 'USA') dbCountry = 'US';
 
         setAddressForm({
           firstName: addr.firstName || '',
@@ -199,6 +200,12 @@ export default function Checkout() {
       setFormError('Please fill in all required shipping fields marked with *');
       return;
     }
+
+    if (addressForm.state.trim().length !== 2 && !isInternational) {
+      setFormError('State must be exactly a 2-character code (e.g., NY, CA) for domestic addresses.');
+      return;
+    }
+
     if (!selectedShippingMethod) {
       setFormError('Please select a shipping method.');
       return;
@@ -247,7 +254,9 @@ export default function Checkout() {
         customer: user.customer,
         division: parsedDivisionId,
         user: user._id,
-        chargeCode: chargeCode.trim(), // Inject Charge Code
+        chargeCode: chargeCode.trim(), 
+        isRushOrder: isRushOrder,
+        isInternational: isInternational,
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
@@ -259,9 +268,9 @@ export default function Checkout() {
           line1: addressForm.street1,
           line2: addressForm.street2,
           city: addressForm.city,
-          state: addressForm.state,
+          state: addressForm.state.toUpperCase().trim(),
           zip: addressForm.zipCode,
-          country: addressForm.country || 'USA'
+          country: addressForm.country || 'US'
         },
         shippingDetails: {
           carrierId: selectedOption?.carrierId,
@@ -453,19 +462,16 @@ export default function Checkout() {
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
                     <div className="relative">
-                      <select name="country" value={addressForm.country} onChange={handleInputChange} className={`${premiumInputClass} appearance-none cursor-pointer`}>
-                        <option value="USA">United States</option>
-                        <option value="Canada">Canada</option>
-                        {addressForm.country !== 'USA' && addressForm.country !== 'Canada' && addressForm.country !== '' && (
-                          <option value={addressForm.country}>{addressForm.country}</option>
-                        )}
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
-                      </div>
+                      <input 
+                        type="text" 
+                        name="country" 
+                        value={addressForm.country} 
+                        onChange={handleInputChange} 
+                        className={premiumInputClass} 
+                        placeholder="e.g. US, CA, GB"
+                      />
                     </div>
                   </div>
-
                 </div>
 
                 {!selectedAddressId && (
@@ -488,19 +494,91 @@ export default function Checkout() {
             </div>
           </section>
 
-          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-5 sm:p-8">
-            <div>
-              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-2 ml-1 flex items-center gap-1.5">
-                Charge Code <span className="text-gray-400 font-medium normal-case tracking-normal">(Optional)</span>
-              </label>
-              <div className="relative">
-                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          {/* Order Details Section */}
+          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
+            <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-100 to-orange-100 border border-white shadow-inner shrink-0">
+                <FileText className="h-4 w-4 text-amber-600" />
+              </div>
+              <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Order Details</h2>
+            </div>
+            
+            <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
+              <div>
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
+                  Order Number <span className="normal-case tracking-normal font-medium text-gray-400">(Auto Generated)</span>
+                </label>
                 <input
                   type="text"
-                  value={chargeCode}
-                  onChange={(e) => setChargeCode(e.target.value)}
-                  className={`${premiumInputClass} font-mono uppercase !pl-11`}
-                  placeholder="e.g. CHG-90210"
+                  value={orderNumber}
+                  readOnly
+                  className="w-full h-12 px-4 rounded-xl border border-white/40 bg-white/30 text-gray-500 font-mono text-xs sm:text-sm font-bold outline-none cursor-default"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1 flex items-center gap-1.5">
+                  Charge Code <span className="text-gray-400 font-medium normal-case tracking-normal">(Optional)</span>
+                </label>
+                <div className="relative">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={chargeCode}
+                    onChange={(e) => setChargeCode(e.target.value)}
+                    className={`${premiumInputClass} font-mono uppercase !pl-11`}
+                    placeholder="e.g. CHG-90210"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
+                  PO Number
+                </label>
+                <input
+                  type="text"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  placeholder="e.g. PO-2026-8942"
+                  className={premiumInputClass}
+                />
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-2">
+                <label className="flex items-center gap-3 p-4 rounded-xl border border-white/60 bg-white/50 cursor-pointer hover:bg-white/80 transition-all shadow-sm">
+                  <input 
+                    type="checkbox" 
+                    checked={isRushOrder} 
+                    onChange={(e) => setIsRushOrder(e.target.checked)} 
+                    className="w-4 h-4 text-red-600 accent-red-500 rounded border-gray-300 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <AlertTriangle size={14} /> Rush Order
+                  </span>
+                </label>
+
+                <label className="flex items-center gap-3 p-4 rounded-xl border border-white/60 bg-white/50 cursor-pointer hover:bg-white/80 transition-all shadow-sm">
+                  <input 
+                    type="checkbox" 
+                    checked={isInternational} 
+                    onChange={(e) => setIsInternational(e.target.checked)} 
+                    className="w-4 h-4 text-blue-600 accent-blue-600 rounded border-gray-300 cursor-pointer"
+                  />
+                  <span className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
+                    <Globe size={14} /> International
+                  </span>
+                </label>
+              </div>
+
+              <div>
+                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Order Notes</label>
+                <textarea
+                  rows="3"
+                  value={orderNotes}
+                  onChange={(e) => setOrderNotes(e.target.value)}
+                  placeholder="Special instructions for downstream fulfillment..."
+                  className="w-full p-4 rounded-xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-inner resize-none"
                 />
               </div>
             </div>
@@ -552,50 +630,6 @@ export default function Checkout() {
             </div>
           </section>
 
-          {/* Order Details Section */}
-          <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden">
-            <div className="border-b border-white/50 px-5 sm:px-6 py-4 sm:py-5 flex items-center gap-3 bg-white/30">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-amber-100 to-orange-100 border border-white shadow-inner shrink-0">
-                <FileText className="h-4 w-4 text-amber-600" />
-              </div>
-              <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Order Details</h2>
-            </div>
-            <div className="p-5 sm:p-8 space-y-4 sm:space-y-5">
-              <div>
-                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
-                  Order Number <span className="normal-case tracking-normal font-medium text-gray-400">(Auto Generated)</span>
-                </label>
-                <input
-                  type="text"
-                  value={orderNumber}
-                  readOnly
-                  className="w-full h-12 px-4 rounded-xl border border-white/40 bg-white/30 text-gray-500 font-mono text-xs sm:text-sm font-bold outline-none cursor-default"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">
-                  PO Number
-                </label>
-                <input
-                  type="text"
-                  value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
-                  placeholder="e.g. PO-2026-8942"
-                  className={premiumInputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Order Notes</label>
-                <textarea
-                  rows="3"
-                  value={orderNotes}
-                  onChange={(e) => setOrderNotes(e.target.value)}
-                  placeholder="Special instructions for downstream fulfillment..."
-                  className="w-full p-4 rounded-xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-inner resize-none"
-                />
-              </div>
-            </div>
-          </section>
         </div>
 
         {/* Right Column: Order Summary */}

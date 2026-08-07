@@ -34,7 +34,6 @@ export default function Products() {
     }
   }, [dispatch, divisionId]);
 
-  console.log(items)
 
   // Derive Nested Categories with defensive Object/String checks
   const dynamicCategories = useMemo(() => {

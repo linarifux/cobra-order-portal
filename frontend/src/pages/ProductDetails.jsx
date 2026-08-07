@@ -61,7 +61,6 @@ export default function ProductDetails() {
   
   // Read the targeted single item state from the Redux store
   const { currentItem: rawProduct, status, error } = useSelector((state) => state.inventory);
-
   const [quantity, setQuantity] = useState('1');
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -121,7 +120,10 @@ export default function ProductDetails() {
     _id: rawProduct._id, // Retain mongo ID internally if needed elsewhere
     image: rawProduct.productImage || rawProduct.image || null,
     desc: rawProduct.itemName || rawProduct.description || rawProduct.desc || 'Unknown Item',
-    category: rawProduct.cat3 || rawProduct.cat2 || rawProduct.category1?.categoryName || rawProduct.category || 'General',
+    // Dynamic Category Tree
+    category: [rawProduct.category1?.categoryName,rawProduct.category2?.categoryName,rawProduct.category3?.categoryName]
+      .filter(Boolean)
+      .join(' > ') || rawProduct.displayCategory || 'General',
     status: rawProduct.status || 'Active',
     
     // Strict numeric casting to prevent UI crashes
@@ -134,6 +136,7 @@ export default function ProductDetails() {
     valuation: Number(rawProduct.totalValuation || ((rawProduct.price || 0) * (rawProduct.available || rawProduct.unitsOnHand || 0))),
     weight: Number(rawProduct.weight || 0)
   } : null;
+
 
   const handleQuantityChange = (e) => {
     const val = e.target.value;
@@ -174,7 +177,7 @@ export default function ProductDetails() {
 
   // Convert the total weight mapped above back into separated display integers
   const weightLbs = Math.floor(product.weight / 16);
-  const weightOz = product.weight % 16;
+  const weightOz = +(product.weight % 16).toFixed(1);
 
   return (
     <div className="relative max-w-5xl mx-auto space-y-4 md:space-y-6 animate-in fade-in duration-700 px-4 sm:px-0 pb-12 pt-6">
@@ -207,13 +210,6 @@ export default function ProductDetails() {
           {/* Image Container */}
           <div className="aspect-square sm:aspect-video lg:aspect-square bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex flex-col items-center justify-center relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent pointer-events-none z-0"></div>
-            
-            <div className="absolute top-4 left-4 z-30 pointer-events-none">
-              <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-md text-blue-700 border border-white shadow-sm">
-                {product.category}
-              </span>
-            </div>
-
             {/* Smart Image Loader */}
             <DetailImage src={product.image} alt={product.desc} />
           </div>
@@ -222,7 +218,8 @@ export default function ProductDetails() {
             <div className="flex justify-between items-center text-sm">
               <span className="flex items-center gap-2 text-gray-500 font-semibold"><Weight className="h-4 w-4"/> Unit Weight</span>
               <span className="font-mono font-bold text-gray-900 bg-white/50 px-2 py-1 rounded border border-white/60 text-xs sm:text-sm truncate max-w-[120px] sm:max-w-none text-right">
-                {weightLbs} lb {weightOz} oz
+                {weightLbs > 0 && <span>{weightLbs} lb </span>}
+                {(weightOz > 0 || weightLbs === 0) && <span>{weightOz} oz</span>}
               </span>
             </div>
             <div className="flex justify-between items-center text-sm border-t border-white/50 pt-4">
@@ -243,10 +240,13 @@ export default function ProductDetails() {
 
             {/* Header */}
             <div className="mb-8 sm:mb-10 relative z-10 flex-1">
+              <p className="text-[10px] sm:text-xs font-black uppercase tracking-widest text-blue-600 mb-3 sm:mb-4">
+                {product.category || 'General'}
+              </p>
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
                 {product.desc}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 text-xs sm:text-sm">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-5 text-xs sm:text-sm">
                 <span className="font-mono font-bold text-gray-600 bg-white/50 border border-white/80 shadow-sm px-3 py-1.5 rounded-lg">
                   SKU: {product.sku || 'N/A'}
                 </span>

@@ -111,7 +111,10 @@ export default function ProductTable({
           {/* MOBILE VIEW: Stacked Cards */}
           <div className="md:hidden flex flex-col gap-4 p-4">
             {products.map((product) => {
-              const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory || 'General';
+              const categoryTree = [product.cat1, product.cat2, product.cat3]
+                .filter(Boolean)
+                .join(' > ') || product.displayCategory || 'General';
+
               // Bulletproof numerics
               const price = Number(product.price || product.cost || 0);
               const available = Number(product.available || product.unitsOnHand || 0);
@@ -142,8 +145,11 @@ export default function ProductTable({
                         </span>
                       </div>
                       
-                      <span className="inline-flex w-max items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 truncate max-w-full">
-                        {lowestCategory}
+                      <span 
+                        className="inline-flex w-max items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 truncate max-w-full"
+                        title={categoryTree}
+                      >
+                        {categoryTree}
                       </span>
                       
                       <p className="text-xs font-medium text-slate-600 leading-snug line-clamp-2 mt-0.5" title={product.desc}>
@@ -213,7 +219,10 @@ export default function ProductTable({
             </thead>
             <tbody className="divide-y divide-slate-100/80">
               {products.map((product) => {
-                const lowestCategory = product.cat3 || product.cat2 || product.cat1 || product.displayCategory || 'General';
+                const categoryTree = [product.cat1, product.cat2, product.cat3]
+                  .filter(Boolean)
+                  .join(' > ') || product.displayCategory || 'General';
+
                 // Bulletproof numerics
                 const price = Number(product.price || product.cost || 0);
                 const available = Number(product.available || product.unitsOnHand || 0);
@@ -241,10 +250,10 @@ export default function ProductTable({
                               {product.id}
                             </Link>
                             <span 
-                              className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 shrink-0 truncate max-w-[120px]"
-                              title={lowestCategory}
+                              className="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200/60 shrink-0 truncate max-w-[250px]"
+                              title={categoryTree}
                             >
-                              {lowestCategory}
+                              {categoryTree}
                             </span>
                           </div>
                           <p className="text-xs font-medium text-slate-600 truncate pr-4" title={product.desc}>

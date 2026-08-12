@@ -17,6 +17,7 @@ export default function Products() {
   const { items = [], status, error } = useSelector((state) => state.inventory || {});
   const activeDivisionRaw = useSelector((state) => state.divisions?.activeDivision);
   
+  
   // Robustly extract the string ID regardless of whether Redux holds an object or a string
   const divisionId = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null 
     ? activeDivisionRaw._id 

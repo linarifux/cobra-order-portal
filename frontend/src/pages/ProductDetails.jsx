@@ -120,6 +120,7 @@ export default function ProductDetails() {
     _id: rawProduct._id, // Retain mongo ID internally if needed elsewhere
     image: rawProduct.productImage || rawProduct.image || null,
     desc: rawProduct.itemName || rawProduct.description || rawProduct.desc || 'Unknown Item',
+    description2: rawProduct.description2 || rawProduct.longDescription || '',
     // Dynamic Category Tree
     category: [rawProduct.category1?.categoryName,rawProduct.category2?.categoryName,rawProduct.category3?.categoryName]
       .filter(Boolean)
@@ -246,6 +247,10 @@ export default function ProductDetails() {
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight leading-tight">
                 {product.desc}
               </h1>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-700 tracking-tight leading-tight">
+                {console.log(product)}
+                {product.description2}
+              </h2>
               <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-5 text-xs sm:text-sm">
                 <span className="font-mono font-bold text-gray-600 bg-white/50 border border-white/80 shadow-sm px-3 py-1.5 rounded-lg">
                   SKU: {product.sku || 'N/A'}

@@ -222,7 +222,6 @@ export default function ProductTable({
                 const categoryTree = [product.cat1, product.cat2, product.cat3]
                   .filter(Boolean)
                   .join(' > ') || product.displayCategory || 'General';
-
                 // Bulletproof numerics
                 const price = Number(product.price || product.cost || 0);
                 const available = Number(product.available || product.unitsOnHand || 0);
@@ -256,8 +255,11 @@ export default function ProductTable({
                               {categoryTree}
                             </span>
                           </div>
-                          <p className="text-xs font-medium text-slate-600 truncate pr-4" title={product.desc}>
+                          <p className="text-sm font-bold font-medium text-slate-600 truncate pr-4" title={product.desc}>
                             {product.desc}
+                          </p>
+                          <p className="text-xs font-medium text-slate-600 truncate pr-4" title={product.description2}>
+                            {product.description2}
                           </p>
                         </div>
                       </div>

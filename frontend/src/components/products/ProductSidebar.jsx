@@ -40,9 +40,10 @@ export default function ProductSidebar({
                   
                   {/* LEVEL 1: Top Category */}
                   <button
-                    onClick={() => handleCategoryClick(cat1.name, cat1.path, cat1.children.length > 0)}
+                    // FIX: Pass cat1.path as the identifier so the system respects the strict category lineage
+                    onClick={() => handleCategoryClick(cat1.path, cat1.path, cat1.children.length > 0)}
                     className={`text-left px-3 md:px-4 py-2.5 md:py-2.5 rounded-xl text-[11px] md:text-xs font-semibold transition-all duration-300 flex items-center justify-between group ${
-                      activeCategory === cat1.name 
+                      activeCategory === cat1.path 
                         ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100/50' 
                         : 'text-slate-600 hover:bg-white/60 hover:text-slate-900 border border-transparent'
                     }`}
@@ -65,9 +66,10 @@ export default function ProductSidebar({
                         {cat1.children.map(cat2 => (
                           <div key={cat2.path} className="flex flex-col">
                             <button
-                              onClick={() => handleCategoryClick(cat2.name, cat2.path, cat2.children.length > 0)}
+                              // FIX: Pass cat2.path to prevent sub-categories with the same name from overlapping
+                              onClick={() => handleCategoryClick(cat2.path, cat2.path, cat2.children.length > 0)}
                               className={`text-left px-3 md:px-4 py-2 rounded-xl text-[10px] md:text-[11px] font-semibold transition-all duration-300 flex items-center justify-between group ${
-                                activeCategory === cat2.name 
+                                activeCategory === cat2.path 
                                   ? 'bg-blue-50/80 text-blue-700 shadow-sm border border-blue-100/50' 
                                   : 'text-slate-500 hover:bg-white/60 hover:text-slate-900 border border-transparent'
                               }`}
@@ -90,9 +92,10 @@ export default function ProductSidebar({
                                   {cat2.children.map(cat3 => (
                                     <button
                                       key={cat3.path}
-                                      onClick={() => handleCategoryClick(cat3.name, cat3.path, false)}
+                                      // FIX: Enforce strict pathing for level 3 as well
+                                      onClick={() => handleCategoryClick(cat3.path, cat3.path, false)}
                                       className={`text-left px-3 md:px-4 py-1.5 md:py-1.5 rounded-xl text-[9px] md:text-[10px] font-semibold transition-all duration-300 flex items-center justify-between group ${
-                                        activeCategory === cat3.name 
+                                        activeCategory === cat3.path 
                                           ? 'bg-blue-50/80 text-blue-700 shadow-sm border border-blue-100/50' 
                                           : 'text-slate-400 hover:bg-white/60 hover:text-slate-800 border border-transparent'
                                       }`}

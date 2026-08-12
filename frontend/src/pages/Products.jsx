@@ -24,7 +24,8 @@ export default function Products() {
     : activeDivisionRaw;
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCategoryPath, setActiveCategoryPath] = useState('All'); // FIX: Added strict path tracking
+  const [activeCategoryDisplay, setActiveCategoryDisplay] = useState('All'); // Used for display logic
   const [expandedCategories, setExpandedCategories] = useState({});
   const [quantities, setQuantities] = useState({});
 
@@ -39,7 +40,6 @@ export default function Products() {
   // Derive Nested Categories with defensive Object/String checks
   const dynamicCategories = useMemo(() => {
     if (!Array.isArray(items)) return [];
-
     
     const categoryMap = {};
     
@@ -117,10 +117,17 @@ export default function Products() {
         product.desc.toLowerCase().includes(searchQuery.toLowerCase()) || 
         product.id.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesCategory = activeCategory === 'All' || 
-        product.cat1 === activeCategory || 
-        product.cat2 === activeCategory || 
-        product.cat3 === activeCategory;
+      // FIX: Check exact path alignment to isolate identical sub-categories
+      let matchesCategory = false;
+      if (activeCategoryPath === 'All') {
+        matchesCategory = true;
+      } else {
+        const productPathParts = [product.cat1, product.cat2, product.cat3].filter(Boolean);
+        const filterPathParts = activeCategoryPath.split('|');
+        
+        // Ensure the product's path matches the selected filter path completely
+        matchesCategory = filterPathParts.every((part, i) => productPathParts[i] === part);
+      }
         
       return matchesSearch && matchesCategory;
     });
@@ -128,12 +135,17 @@ export default function Products() {
     return finalFiltered.sort((a, b) => 
       a.id.localeCompare(b.id, undefined, { numeric: true, sensitivity: 'base' })
     );
-  }, [items, searchQuery, activeCategory, divisionId]);
+  }, [items, searchQuery, activeCategoryPath, divisionId]);
 
-  const handleCategoryClick = (catName, path, hasChildren) => {
-    setActiveCategory(catName);
+  // FIX: Destructure path logic for sidebar tracking
+  const handleCategoryClick = (path, identifierPath, hasChildren) => {
+    setActiveCategoryPath(identifierPath);
+    // Extract just the name from the path string to use for the header title display
+    const name = identifierPath.split('|').pop();
+    setActiveCategoryDisplay(name);
+
     if (hasChildren) {
-      setExpandedCategories(prev => ({ ...prev, [path]: !prev[path] }));
+      setExpandedCategories(prev => ({ ...prev, [identifierPath]: !prev[identifierPath] }));
     }
   };
 
@@ -197,8 +209,11 @@ export default function Products() {
       <div className="w-full md:w-64 flex-shrink-0 max-h-[350px] md:max-h-full">
         <ProductSidebar 
           dynamicCategories={dynamicCategories}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
+          activeCategory={activeCategoryPath}
+          setActiveCategory={(val) => {
+            setActiveCategoryPath(val);
+            setActiveCategoryDisplay(val);
+          }}
           expandedCategories={expandedCategories}
           handleCategoryClick={handleCategoryClick}
         />
@@ -206,7 +221,7 @@ export default function Products() {
 
       <main className="flex-1 flex flex-col min-w-0 min-h-[500px] bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-[2rem] border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] h-full overflow-hidden">
         <ProductHeader 
-          activeCategory={activeCategory}
+          activeCategory={activeCategoryDisplay}
           productCount={filteredProducts.length}
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}

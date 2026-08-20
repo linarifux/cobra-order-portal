@@ -5,7 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Box, Home, Package, ClipboardList, MapPin, Menu, X, ShoppingCart, Building2 } from 'lucide-react';
 
 import { setActiveDivision, fetchDivisions } from '../../store/slices/divisionSlice';
-import { fetchCartDb } from '../../store/slices/cartSlice'; // <-- ADDED IMPORT
+import { fetchCartDb } from '../../store/slices/cartSlice'; 
+import { fetchCustomerById } from '../../store/slices/customerSlice'; 
+
 import CartDrawer from '../navbar/CartDrawer';
 import MobileMenu from '../navbar/MobileMenu';
 import ProfileMenu from '../navbar/ProfileMenu';
@@ -23,11 +25,12 @@ export default function Navbar() {
   
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
+  const { currentCustomer } = useSelector(state => state.customers || {}); 
   
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
   
-  // FIX: Safely Auto-select division inside a useEffect
+  // Safely Auto-select division inside a useEffect
   useEffect(() => {
     if (user?.divisions?.length === 1 && !activeDivId) {
       dispatch(setActiveDivision(user.divisions[0]));
@@ -37,8 +40,18 @@ export default function Navbar() {
   const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
     ? activeDivisionRaw 
     : allDivisions.find(d => d._id === activeDivisionRaw);
-    
-  const displayCustomerName = user?.customer?.customerName || user?.customerName || 'DSM';
+
+  // --- Fetch Customer Data ---
+  const customerId = user?.customer?._id || user?.customer;
+  
+  useEffect(() => {
+    if (customerId && String(currentCustomer?._id) !== String(customerId)) {
+      dispatch(fetchCustomerById(customerId));
+    }
+  }, [dispatch, customerId, currentCustomer?._id]);
+
+  // Strictly use DB fetched data with no fallbacks
+  const displayCustomerName = currentCustomer?.customerName;
   const displayDivisionName = activeDivObj?.divisionName || null;
 
   // --- Synchronization Effects ---
@@ -46,8 +59,7 @@ export default function Navbar() {
     dispatch(fetchDivisions());
   }, [dispatch]);
 
-  // CRITICAL FIX: Fetch the specific division's cart when the app loads OR when the user switches divisions.
-  // This prevents the old division's cart from bleeding into the new division.
+  // Fetch the specific division's cart when the app loads OR when the user switches divisions.
   useEffect(() => {
     if (user && activeDivId) {
       dispatch(fetchCartDb());
@@ -98,16 +110,20 @@ export default function Navbar() {
               <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
                 <Box className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
               </div>
-              <div className="hidden sm:flex flex-col min-w-0">
-                <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate max-w-[200px] lg:max-w-[250px]" title={displayCustomerName}>
-                  {displayCustomerName}
-                </h1>
-                {displayDivisionName && (
-                  <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1 truncate max-w-[200px] lg:max-w-[250px]" title={displayDivisionName}>
-                    <Building2 size={10} className="text-brand-gold shrink-0" /> <span className="truncate">{displayDivisionName}</span>
-                  </p>
-                )}
-              </div>
+              
+              {/* Only render this entire block once the data is retrieved from the DB */}
+              {displayCustomerName && (
+                <div className="hidden sm:flex flex-col min-w-0">
+                  <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate max-w-[200px] lg:max-w-[250px]" title={displayCustomerName}>
+                    {displayCustomerName}
+                  </h1>
+                  {displayDivisionName && (
+                    <p className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5 flex items-center gap-1 truncate max-w-[200px] lg:max-w-[250px]" title={displayDivisionName}>
+                      <Building2 size={10} className="text-brand-gold shrink-0" /> <span className="truncate">{displayDivisionName}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </Link>
 
             <div className="hidden md:flex items-center gap-1 lg:gap-2 border-l border-slate-200/60 pl-6 lg:pl-8">

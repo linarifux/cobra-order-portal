@@ -1,19 +1,30 @@
 import { useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchOrders } from '../store/slices/orderSlice';
-import { ArrowUpRight, Clock, CheckCircle2, AlertCircle, TrendingUp, Loader2, Shield } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, AlertCircle, TrendingUp, Loader2, Shield } from 'lucide-react';
 
 export default function Home() {
   const dispatch = useDispatch();
   
   // Extract user and active division context from Redux
-  const { user } = useSelector((state) => state.auth);
-  const activeDivision = useSelector((state) => state.divisions?.activeDivision);
-  const { items: orders, status: ordersStatus, error } = useSelector((state) => state.orders);
+  const { user } = useSelector((state) => state.auth || {});
+  const { activeDivision, items: allDivisions = [] } = useSelector((state) => state.divisions || {});
+  const { currentCustomer } = useSelector((state) => state.customers || {});
+  const { items: orders, status: ordersStatus, error } = useSelector((state) => state.orders || {});
 
   // Safely extract IDs
   const divisionId = activeDivision?._id || activeDivision;
   const userId = user?._id || user?.id;
+
+  // Resolve the active division object to get its name
+  const activeDivObj = typeof activeDivision === 'object' && activeDivision !== null
+    ? activeDivision 
+    : allDivisions.find(d => d._id === activeDivision);
+
+  // Dynamically determine the context name for the UI
+  const customerName = currentCustomer?.customerName || user?.customer?.customerName || user?.customerName || 'System';
+  const divisionName = activeDivObj?.divisionName ? ` - ${activeDivObj.divisionName}` : '';
+  const contextName = `${customerName}${divisionName}`;
 
   // --- UNIFIED FRONTEND RBAC CHECK ---
   const isPrivileged = user?.portal === 'admin' || user?.role === 'super_user';
@@ -85,6 +96,17 @@ export default function Home() {
 
   const displayName = user?.name || user?.firstName || 'User';
 
+  // --- HIGH-PRIORITY BLOCKING LOADER ---
+  // Blocks the UI from rendering zero-states while the DB is fetching
+  if (ordersStatus === 'loading' || ordersStatus === 'idle') {
+    return (
+      <div className="h-full flex flex-col justify-center items-center min-h-[60vh] gap-4">
+        <Loader2 className="animate-spin text-brand-gold" size={36} />
+        <p className="text-sm font-black text-slate-700 uppercase tracking-widest">Compiling Dashboard...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="relative space-y-6 lg:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
@@ -107,7 +129,7 @@ export default function Home() {
             )}
           </div>
           <p className="text-sm lg:text-base font-medium text-gray-500">
-            Here is what's happening with your DSM order operations today.
+            Here is what's happening with your <strong className="text-gray-700">{contextName}</strong> order operations today.
           </p>
         </div>
         <button className="hidden sm:flex items-center gap-2 rounded-2xl bg-white/50 border border-white/60 px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm backdrop-blur-md hover:bg-white/80 transition-all duration-300">
@@ -134,7 +156,7 @@ export default function Home() {
             <div>
               <div className="flex items-center gap-3">
                 <p className="text-2xl lg:text-3xl font-extrabold text-gray-900 tracking-tight">
-                  {ordersStatus === 'loading' ? <Loader2 className="h-5 w-5 lg:h-6 lg:w-6 animate-spin text-gray-400 mt-1" /> : stat.value}
+                  {stat.value}
                 </p>
               </div>
               <p className="text-xs lg:text-sm font-semibold text-gray-500 uppercase tracking-wider mt-1">{stat.name}</p>

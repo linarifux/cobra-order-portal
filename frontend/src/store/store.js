@@ -7,6 +7,7 @@ import carrierReducer from './slices/carrierSlice';
 import divisionReducer from './slices/divisionSlice'; 
 import checkoutReducer from './slices/checkoutSlice';
 import cartReducer from './slices/cartSlice'; 
+import customerReducer from './slices/customerSlice'
 
 export const store = configureStore({
   reducer: {
@@ -18,5 +19,6 @@ export const store = configureStore({
     divisions: divisionReducer, 
     checkout: checkoutReducer,
     cart: cartReducer, 
+    customers: customerReducer
   },
 });

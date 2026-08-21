@@ -12,6 +12,8 @@ import CartDrawer from '../navbar/CartDrawer';
 import MobileMenu from '../navbar/MobileMenu';
 import ProfileMenu from '../navbar/ProfileMenu';
 
+import BracoLogo from '/bracco/logo.png';
+
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -23,9 +25,10 @@ export default function Navbar() {
   const cartItems = useSelector(state => state.cart?.items) || [];
   const cartCount = cartItems.reduce((total, item) => total + (item?.quantity || 0), 0);
   
-  const { user } = useSelector(state => state.auth || {});
-  const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
-  const { currentCustomer } = useSelector(state => state.customers || {}); 
+  // Extract statuses to monitor loading phases
+  const { user, status: authStatus } = useSelector(state => state.auth || {});
+  const { items: allDivisions = [], status: divisionStatus } = useSelector(state => state.divisions || {});
+  const { currentCustomer, status: customerStatus } = useSelector(state => state.customers || {}); 
   
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
@@ -49,10 +52,6 @@ export default function Navbar() {
       dispatch(fetchCustomerById(customerId));
     }
   }, [dispatch, customerId, currentCustomer?._id]);
-
-  // Strictly use DB fetched data with no fallbacks
-  const displayCustomerName = currentCustomer?.customerName;
-  const displayDivisionName = activeDivObj?.divisionName || null;
 
   // --- Synchronization Effects ---
   useEffect(() => {
@@ -99,6 +98,27 @@ export default function Navbar() {
 
   if (location.pathname === '/login') return null; 
 
+  // --- STRICT DATA READINESS CHECK ---
+  // We evaluate if auth, divisions, or customers are loading.
+  // We also strictly ensure the customer ID in Redux matches the User's exact Customer ID.
+  const isDataPending = 
+    authStatus === 'loading' || 
+    divisionStatus === 'loading' || 
+    customerStatus === 'loading' || 
+    (customerId && String(currentCustomer?._id) !== String(customerId));
+
+  // Render an empty, structural navbar to prevent layout shifting while loading.
+  if (isDataPending) {
+    return (
+      <nav className="sticky top-0 z-[100] w-full border-b border-white/60 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 h-16 sm:h-20" />
+    );
+  }
+
+  // --- Data Variables (Safely evaluated ONLY after loading is finished) ---
+  const displayCustomerName = currentCustomer?.customerName;
+  const displayDivisionName = activeDivObj?.divisionName || null;
+  const isBracco = Boolean(displayCustomerName?.toLowerCase().includes('bracco'));
+
   return (
     <>
       <nav className="sticky top-0 z-[100] w-full border-b border-white/60 bg-white/60 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_4px_30px_rgba(0,0,0,0.04)]">
@@ -107,12 +127,22 @@ export default function Navbar() {
           {/* LEFT: Branding & Navigation */}
           <div className="flex items-center gap-6 sm:gap-8 xl:gap-12 min-w-0">
             <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0 min-w-0">
-              <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
-                <Box className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
-              </div>
               
-              {/* Only render this entire block once the data is retrieved from the DB */}
-              {displayCustomerName && (
+              {/* Conditional Logo Rendering */}
+              {isBracco ? (
+                <img 
+                  src={BracoLogo} 
+                  alt="Bracco Logo" 
+                  className="h-9 sm:h-11 w-auto object-contain shrink-0 transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
+                />
+              ) : (
+                <div className="flex h-9 w-9 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-tr from-brand-gold to-amber-400 text-slate-900 shadow-lg shadow-brand-gold/30 group-hover:shadow-brand-gold/50 transition-all duration-300 group-hover:scale-105">
+                  <Box className="h-5 w-5 sm:h-6 sm:w-6" strokeWidth={2.5} />
+                </div>
+              )}
+              
+              {/* Customer and Division Labels */}
+              {displayCustomerName && !isBracco && (
                 <div className="hidden sm:flex flex-col min-w-0">
                   <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate max-w-[200px] lg:max-w-[250px]" title={displayCustomerName}>
                     {displayCustomerName}

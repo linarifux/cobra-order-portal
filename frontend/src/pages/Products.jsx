@@ -44,6 +44,10 @@ export default function Products() {
     const categoryMap = {};
     
     items.forEach(item => {
+      // FIX: Skip items flagged as offWeb so they don't generate empty sidebar categories
+      const isOffWeb = item.offWeb === true || String(item.offWeb).toLowerCase() === 'true';
+      if (isOffWeb) return;
+
       const itemDivisionId = item.division?._id || item.division;
       if (itemDivisionId !== divisionId) return;
 
@@ -88,6 +92,10 @@ export default function Products() {
 
     const mapped = items
       .filter(item => {
+        // FIX: Filter out offWeb products from the catalog
+        const isOffWeb = item.offWeb === true || String(item.offWeb).toLowerCase() === 'true';
+        if (isOffWeb) return false;
+
         const itemDivisionId = item.division?._id || item.division;
         return itemDivisionId === divisionId;
       })

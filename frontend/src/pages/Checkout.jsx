@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
@@ -104,6 +104,48 @@ export default function Checkout() {
     }
   }, [addressStatus, dispatch, user?._id]);
 
+  // Map the primary userAddress from the User model into the list seamlessly
+  const primaryAddress = useMemo(() => {
+    if (!user || !user.userAddress || !user.userAddress.street1) return null;
+    
+    // Split full name from user profile into first/last for the format
+    const nameParts = (user.name || '').split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    return {
+      _id: 'primary-user-address',
+      firstName,
+      lastName,
+      company: '', 
+      contactPhone: user.phone || '',
+      contactEmail: user.email || '',
+      street1: user.userAddress.street1 || '',
+      street2: user.userAddress.street2 || '',
+      city: user.userAddress.city || '',
+      state: user.userAddress.state || '',
+      zipCode: user.userAddress.zipCode || '',
+      country: user.userAddress.country || 'US',
+    };
+  }, [user]);
+
+  // Filter addresses strictly to the active user and combine with primary profile address
+  const combinedAddresses = useMemo(() => {
+    const combined = [];
+    
+    if (primaryAddress) combined.push(primaryAddress);
+    
+    if (addresses && addresses.length > 0) {
+      const userOnlyAddresses = addresses.filter(addr => {
+        const addrUserId = typeof addr.user === 'object' ? addr.user?._id : addr.user;
+        return String(addrUserId) === String(user?._id);
+      });
+      combined.push(...userOnlyAddresses);
+    }
+
+    return combined;
+  }, [addresses, primaryAddress, user?._id]);
+
   // 2. Fetch Carrier Configurations dynamically scoped by the active Division
   useEffect(() => {
     if (carrierStatus === 'idle' && parsedDivisionId) {
@@ -146,7 +188,7 @@ export default function Checkout() {
     setSelectedAddressId(id);
 
     if (id) {
-      const addr = addresses.find(a => a._id === id);
+      const addr = combinedAddresses.find(a => a._id === id);
       if (addr) {
         let dbCountry = addr.country || 'US';
         if (dbCountry === 'United States' || dbCountry === 'USA') dbCountry = 'US';
@@ -384,9 +426,9 @@ export default function Checkout() {
                     className={`${premiumInputClass} cursor-pointer appearance-none disabled:opacity-50`}
                   >
                     <option value="">Select a saved address...</option>
-                    {addresses.map((addr) => (
+                    {combinedAddresses.map((addr) => (
                       <option key={addr._id} value={addr._id}>
-                        {addr.firstName} {addr.lastName} {addr.company ? `(${addr.company})` : ''} - {addr.street1}, {addr.city}
+                        {addr.firstName} {addr.lastName} {addr.company ? `(${addr.company})` : ''} - {addr.street1}, {addr.city} {addr._id === 'primary-user-address' ? '(Profile Default)' : ''}
                       </option>
                     ))}
                   </select>
@@ -474,7 +516,7 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {!selectedAddressId && (
+                {(!selectedAddressId || selectedAddressId === 'primary-user-address') && (
                   <div className="pt-4 sm:pt-6 pb-2">
                     <label className="flex items-center gap-3 cursor-pointer group w-max">
                       <div className={`flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-lg border transition-all duration-300 ${saveToAddressBook ? 'bg-blue-600 border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white/50 border-white/80 group-hover:border-blue-500 group-hover:bg-white'}`}>

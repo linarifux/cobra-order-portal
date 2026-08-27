@@ -17,14 +17,14 @@ import {
 const EMPTY_FORM = {
   firstName: '', 
   lastName: '',
-  contactPhone: '', 
-  contactEmail: '', 
+  phone: '', 
+  email: '', 
   street1: '', 
   street2: '', 
   city: '', 
   state: '', 
   zipCode: '', 
-  country: 'USA',
+  country: 'US',
   addressType: 'Shipping',
   isDefault: false
 };
@@ -65,9 +65,51 @@ export default function Address() {
     };
   }, [isModalOpen]);
 
+  // Map the primary userAddress from the User model into the list seamlessly
+  const primaryAddress = useMemo(() => {
+    if (!user || !user.userAddress || !user.userAddress.street1) return null;
+    
+    // Split full name from user profile into first/last for the card design
+    const nameParts = (user.name || '').split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+    return {
+      _id: 'primary-user-address',
+      isPrimaryUserAddress: true, // Flag to differentiate from secondary address collection
+      firstName,
+      lastName,
+      phone: user.phone || '',
+      email: user.email || '',
+      street1: user.userAddress.street1 || '',
+      street2: user.userAddress.street2 || '',
+      city: user.userAddress.city || '',
+      state: user.userAddress.state || '',
+      zipCode: user.userAddress.zipCode || '',
+      country: user.userAddress.country || 'US',
+      addressType: 'Primary Account',
+      isDefault: true // Hardcoded to be the default
+    };
+  }, [user]);
+
   const filteredAddresses = useMemo(() => {
-    if (!addresses) return [];
-    return addresses.filter(addr => {
+    const combinedAddresses = [];
+    
+    // Push the primary address first if it exists
+    if (primaryAddress) combinedAddresses.push(primaryAddress);
+    
+    // Append secondary addresses (strictly filtering for the current user's ID to prevent cross-contamination)
+    if (addresses && addresses.length > 0) {
+      const userOnlyAddresses = addresses.filter(addr => {
+        const addrUserId = typeof addr.user === 'object' ? addr.user?._id : addr.user;
+        return String(addrUserId) === String(userId);
+      });
+
+      // Force isDefault to false visually so they don't clash with the primary profile address
+      combinedAddresses.push(...userOnlyAddresses.map(a => primaryAddress ? { ...a, isDefault: false } : a));
+    }
+
+    return combinedAddresses.filter(addr => {
       const query = searchQuery.toLowerCase();
       const fullName = `${addr.firstName || ''} ${addr.lastName || ''}`.toLowerCase();
       return (
@@ -76,7 +118,7 @@ export default function Address() {
         (addr.addressType || '').toLowerCase().includes(query)
       );
     });
-  }, [addresses, searchQuery]);
+  }, [addresses, primaryAddress, searchQuery, userId]);
 
   const openModal = (address = null) => {
     if (address) {
@@ -205,7 +247,7 @@ export default function Address() {
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex-shrink-0"
           >
             <Plus className="h-4 w-4 sm:h-5 sm:w-5" /> 
-            <span>Add Customer</span>
+            <span>Add Address</span>
           </button>
         </div>
       </div>
@@ -242,22 +284,30 @@ export default function Address() {
                 </div>
                 
                 {/* Persistent on Mobile, Hover on Desktop */}
-                <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-2 shrink-0">
-                  <button 
-                    onClick={() => openModal(addr)}
-                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all"
-                    title="Edit Address"
-                  >
-                    <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(addr._id)}
-                    className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 hover:shadow-sm transition-all"
-                    title="Delete Address"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </button>
-                </div>
+                {!addr.isPrimaryUserAddress ? (
+                  <div className="flex items-center gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-2 shrink-0">
+                    <button 
+                      onClick={() => openModal(addr)}
+                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-blue-600 hover:bg-white hover:shadow-sm transition-all"
+                      title="Edit Address"
+                    >
+                      <Edit2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(addr._id)}
+                      className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg sm:rounded-xl bg-white/50 border border-white/60 text-gray-500 hover:text-red-600 hover:bg-red-50 hover:border-red-100 hover:shadow-sm transition-all"
+                      title="Delete Address"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity mt-2 shrink-0">
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest bg-white/60 px-2 py-1 rounded-lg border border-slate-200 shadow-sm">
+                      Managed in Profile
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Card Body */}
@@ -273,16 +323,16 @@ export default function Address() {
                     <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs">{addr.country}</span>
                   </span>
                 </div>
-                {addr.contactPhone && (
+                {addr.phone && (
                   <div className="flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600">
                     <Phone className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
-                    <span>{addr.contactPhone}</span>
+                    <span>{addr.phone}</span>
                   </div>
                 )}
-                {addr.contactEmail && (
+                {addr.email && (
                   <div className="flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600 min-w-0">
                     <Mail className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
-                    <span className="truncate" title={addr.contactEmail}>{addr.contactEmail}</span>
+                    <span className="truncate" title={addr.email}>{addr.email}</span>
                   </div>
                 )}
               </div>
@@ -295,7 +345,7 @@ export default function Address() {
             <Map className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
           </div>
           <h2 className="text-lg sm:text-xl font-bold text-gray-900">No addresses found</h2>
-          <p className="text-xs sm:text-sm font-medium text-gray-500 mt-1 sm:mt-2 mb-4 sm:mb-6 text-center max-w-[250px] sm:max-w-none">We couldn't find any customers matching your search.</p>
+          <p className="text-xs sm:text-sm font-medium text-gray-500 mt-1 sm:mt-2 mb-4 sm:mb-6 text-center max-w-[250px] sm:max-w-none">We couldn't find any addresses matching your search.</p>
           <button 
             onClick={() => setSearchQuery('')}
             className="text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 bg-white/50 px-5 sm:px-6 py-2 sm:py-2.5 rounded-lg sm:rounded-xl border border-white/80 shadow-sm transition-all"
@@ -345,13 +395,13 @@ export default function Address() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Phone</label>
-                    <input type="tel" name="contactPhone" value={formData.contactPhone || ''} onChange={handleInputChange}
+                    <input type="tel" name="phone" value={formData.phone || ''} onChange={handleInputChange}
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="(555) 555-5555" />
                   </div>
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Contact Email</label>
-                    <input type="email" name="contactEmail" value={formData.contactEmail || ''} onChange={handleInputChange}
+                    <input type="email" name="email" value={formData.email || ''} onChange={handleInputChange}
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="alex@example.com" />
                   </div>
@@ -398,7 +448,7 @@ export default function Address() {
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Country</label>
                     <input type="text" name="country" value={formData.country || ''} onChange={handleInputChange}
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
-                      placeholder="USA" />
+                      placeholder="US" />
                   </div>
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Address Type</label>

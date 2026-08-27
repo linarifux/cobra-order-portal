@@ -28,13 +28,13 @@ export const fetchAddresses = createAsyncThunk(
   }
 );
 
-// Fetch addresses specifically for one User (Aligned with Address Schema 'user' ref)
+// Fetch addresses specifically for one User 
+// FIXED: using query parameter ?user=userId for safety if nested route does not exist
 export const fetchAddressesByUser = createAsyncThunk(
   'addresses/fetchAddressesByUser',
   async (userId, { rejectWithValue }) => {
     try {
-      // Endpoint updated to query by User ID instead of Customer ID
-      const response = await fetch(`${API_URL}/users/${userId}/addresses`, {
+      const response = await fetch(`${API_URL}/addresses?user=${userId}`, {
         method: 'GET',
         headers: getAuthHeaders()
       });

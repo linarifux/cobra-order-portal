@@ -7,7 +7,7 @@ import { fetchCarriers } from '../store/slices/carrierSlice';
 import api from '../utils/api';
 import {
   ArrowLeft, ArrowRight, ShoppingBag, MapPin,
-  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase, Globe, AlertTriangle
+  FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase, AlertTriangle
 } from 'lucide-react';
 
 // Robust internal component to handle checkout image loading and error fallbacks
@@ -81,7 +81,6 @@ export default function Checkout() {
   const [orderNotes, setOrderNotes] = useState('');
   const [chargeCode, setChargeCode] = useState(''); 
   const [isRushOrder, setIsRushOrder] = useState(false);
-  const [isInternational, setIsInternational] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -243,7 +242,8 @@ export default function Checkout() {
       return;
     }
 
-    if (addressForm.state.trim().length !== 2 && !isInternational) {
+    const isDomestic = ['US', 'USA', 'UNITED STATES', 'UNITED STATES OF AMERICA'].includes((addressForm.country || '').toUpperCase().trim());
+    if (addressForm.state.trim().length !== 2 && isDomestic) {
       setFormError('State must be exactly a 2-character code (e.g., NY, CA) for domestic addresses.');
       return;
     }
@@ -298,7 +298,6 @@ export default function Checkout() {
         user: user._id,
         chargeCode: chargeCode.trim(), 
         isRushOrder: isRushOrder,
-        isInternational: isInternational,
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
@@ -587,7 +586,7 @@ export default function Checkout() {
                 />
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 pt-2">
+              <div className="grid grid-cols-1 gap-4 sm:gap-5 pt-2">
                 <label className="flex items-center gap-3 p-4 rounded-xl border border-white/60 bg-white/50 cursor-pointer hover:bg-white/80 transition-all shadow-sm">
                   <input 
                     type="checkbox" 
@@ -597,18 +596,6 @@ export default function Checkout() {
                   />
                   <span className="text-xs font-bold text-red-600 uppercase tracking-widest flex items-center gap-1.5">
                     <AlertTriangle size={14} /> Rush Order
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-3 p-4 rounded-xl border border-white/60 bg-white/50 cursor-pointer hover:bg-white/80 transition-all shadow-sm">
-                  <input 
-                    type="checkbox" 
-                    checked={isInternational} 
-                    onChange={(e) => setIsInternational(e.target.checked)} 
-                    className="w-4 h-4 text-blue-600 accent-blue-600 rounded border-gray-300 cursor-pointer"
-                  />
-                  <span className="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
-                    <Globe size={14} /> International
                   </span>
                 </label>
               </div>

@@ -166,9 +166,14 @@ export default function Products() {
   const handleAdd = (product) => {
     const qty = parseInt(quantities[product.id] || 0, 10);
     
-    // Evaluate if the entered quantity exceeds the product's maximum limit
+    // Evaluate limits safely parsing Number (treating invalid/hyphens as 0)
     const maxLimit = Number(product.max) || 0;
-    const qtyLimitExceeds = maxLimit > 0 && qty > maxLimit;
+    const minLimit = Number(product.min) || 0;
+    
+    const exceedsMax = maxLimit > 0 && qty > maxLimit;
+    const belowMin = minLimit > 0 && qty < minLimit;
+    
+    const qtyLimitExceeds = exceedsMax || belowMin;
 
     if (qty > 0) {
       // Dispatch the flag into the cart payload

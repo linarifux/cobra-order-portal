@@ -120,10 +120,15 @@ export default function ProductTable({
               const available = Number(product.available || product.unitsOnHand || 0);
               const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
               
-              // Max limit warning check
+              // Limit warning checks
               const currentQty = Number(quantities[product.id]) || 0;
               const maxLimit = Number(product.max) || 0;
+              const minLimit = Number(product.min) || 0;
+              
               const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
+              // Only trigger minimum warning if they actually typed a number > 0
+              const isBelowMin = minLimit > 0 && currentQty > 0 && currentQty < minLimit;
+              const hasWarning = isExceedingMax || isBelowMin;
 
               return (
                 <div key={product.id || product._id} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
@@ -167,7 +172,7 @@ export default function ProductTable({
 
                   {/* Action Pill (Full Width) & Warning */}
                   <div className="flex flex-col gap-1.5 w-full">
-                    <div className={`flex items-center bg-white border ${isExceedingMax ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden h-12 w-full transition-all`}>
+                    <div className={`flex items-center bg-white border ${hasWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden h-12 w-full transition-all`}>
                       <input
                         type="text"
                         inputMode="numeric"
@@ -187,16 +192,19 @@ export default function ProductTable({
                       </button>
                     </div>
                     
-                    {/* Max Limit Warning */}
+                    {/* Limit Warnings */}
                     <AnimatePresence>
-                      {isExceedingMax && (
+                      {hasWarning && (
                         <motion.p 
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1 mt-0.5"
                         >
-                          <AlertTriangle size={12} /> Limit exceeded ({maxLimit}). Requires approval.
+                          <AlertTriangle size={12} /> 
+                          {isExceedingMax 
+                            ? `Limit exceeded (${maxLimit}). Requires approval.` 
+                            : `Below minimum (${minLimit}). Requires approval.`}
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -227,10 +235,15 @@ export default function ProductTable({
                 const available = Number(product.available || product.unitsOnHand || 0);
                 const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
                 
-                // Max limit warning check
+                // Limit warning checks
                 const currentQty = Number(quantities[product.id]) || 0;
                 const maxLimit = Number(product.max) || 0;
+                const minLimit = Number(product.min) || 0;
+                
                 const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
+                // Only trigger minimum warning if they actually typed a number > 0
+                const isBelowMin = minLimit > 0 && currentQty > 0 && currentQty < minLimit;
+                const hasWarning = isExceedingMax || isBelowMin;
 
                 return (
                   <tr key={product.id || product._id} className="hover:bg-white/60 transition-colors duration-200 group">
@@ -289,7 +302,7 @@ export default function ProductTable({
                     {/* Column 4: Action Pill & Warning */}
                     <td className="px-6 py-4 align-top pt-5">
                       <div className="flex flex-col items-end gap-1.5">
-                        <div className={`flex items-center bg-white border ${isExceedingMax ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden transition-all w-max`}>
+                        <div className={`flex items-center bg-white border ${hasWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden transition-all w-max`}>
                           <input
                             type="text"
                             maxLength="4"
@@ -309,16 +322,19 @@ export default function ProductTable({
                           </button>
                         </div>
 
-                        {/* Max Limit Warning */}
+                        {/* Limit Warnings */}
                         <AnimatePresence>
-                          {isExceedingMax && (
+                          {hasWarning && (
                             <motion.p 
                               initial={{ opacity: 0, y: -5 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -5 }}
                               className="text-[9px] font-bold text-amber-600 flex items-center justify-end gap-1 pr-1"
                             >
-                              <AlertTriangle size={10} /> Limit exceeded ({maxLimit}). Requires approval.
+                              <AlertTriangle size={10} /> 
+                              {isExceedingMax 
+                                ? `Limit exceeded (${maxLimit}). Requires approval.` 
+                                : `Below minimum (${minLimit}). Requires approval.`}
                             </motion.p>
                           )}
                         </AnimatePresence>

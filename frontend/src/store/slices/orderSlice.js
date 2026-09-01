@@ -55,6 +55,27 @@ export const fetchOrderById = createAsyncThunk(
   }
 );
 
+// NEW: Update an Order (used for releasing pending orders, status changes, etc)
+export const updateOrder = createAsyncThunk(
+  'orders/updateOrder',
+  async ({ id, updateData }, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_URL}/orders/${id}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updateData)
+      });
+      const data = await response.json();
+      
+      if (!response.ok) throw new Error(data.message || 'Failed to update order');
+      
+      return data.data?.order || data.data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  }
+);
+
 const orderSlice = createSlice({
   name: 'orders',
   initialState: {
@@ -97,6 +118,19 @@ const orderSlice = createSlice({
       .addCase(fetchOrderById.rejected, (state, action) => {
         state.detailsStatus = 'failed';
         state.error = action.payload;
+      })
+      // Update Order (Release pending orders)
+      .addCase(updateOrder.fulfilled, (state, action) => {
+        const updatedOrder = action.payload;
+        // Update the order in the list if it exists
+        const index = state.items.findIndex(o => o._id === updatedOrder._id);
+        if (index !== -1) {
+          state.items[index] = updatedOrder;
+        }
+        // Update the current active order if it matches
+        if (state.currentOrder && state.currentOrder._id === updatedOrder._id) {
+          state.currentOrder = updatedOrder;
+        }
       });
   }
 });

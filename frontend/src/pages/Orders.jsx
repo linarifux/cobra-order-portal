@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Download, Loader2, AlertCircle, Search, ClipboardList, Briefcase } from 'lucide-react';
-import { fetchOrders } from '../store/slices/orderSlice';
+import { Download, Loader2, AlertCircle, Search, ClipboardList, Briefcase, Unlock } from 'lucide-react';
+import { toast } from 'sonner';
+import { fetchOrders, updateOrder } from '../store/slices/orderSlice';
 
 export default function Orders() {
   const dispatch = useDispatch();
@@ -13,6 +14,7 @@ export default function Orders() {
   const { items: orders, status, error } = useSelector(state => state.orders);
   
   const [searchQuery, setSearchQuery] = useState('');
+  const [isReleasing, setIsReleasing] = useState(null);
 
   // Extract the IDs safely
   const divisionId = activeDivision?._id || activeDivision;
@@ -20,6 +22,9 @@ export default function Orders() {
 
   // --- UNIFIED FRONTEND RBAC CHECK ---
   const isPrivileged = user?.portal === 'admin' || user?.role === 'super_user';
+  
+  // Specifically check if the user is a superuser or admin who can release orders
+  const canReleaseOrder = ['super_user', 'super_admin', 'admin'].includes(user?.role) || user?.portal === 'admin';
 
   // Fetch fresh orders scoped to the current user OR full scope for privileged users
   useEffect(() => {
@@ -93,6 +98,18 @@ export default function Orders() {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric', month: 'short', day: 'numeric'
     });
+  };
+
+  const handleReleaseOrder = async (orderId) => {
+    setIsReleasing(orderId);
+    try {
+      await dispatch(updateOrder({ id: orderId, updateData: { status: 'New' } })).unwrap();
+      toast.success("Order released successfully.");
+    } catch (err) {
+      toast.error("Failed to release order: " + (err.message || err));
+    } finally {
+      setIsReleasing(null);
+    }
   };
 
   // --- Loader States ---
@@ -174,9 +191,20 @@ export default function Orders() {
                 >
                   {order.orderNumber}
                 </Link>
-                <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
-                  {order.status}
-                </span>
+                <div className="flex flex-col items-end gap-2">
+                  <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
+                    {order.status}
+                  </span>
+                  {order.status === 'Pending' && canReleaseOrder && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); handleReleaseOrder(order._id); }}
+                      disabled={isReleasing === order._id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />} Release
+                    </button>
+                  )}
+                </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4 mb-4 border-b border-white/50 pb-4">
@@ -232,6 +260,7 @@ export default function Orders() {
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Charge Code</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Total</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Status</th>
+                <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/40">
@@ -270,11 +299,26 @@ export default function Orders() {
                         {order.status}
                       </span>
                     </td>
+                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-right">
+                      {order.status === 'Pending' && canReleaseOrder && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleReleaseOrder(order._id);
+                          }}
+                          disabled={isReleasing === order._id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
+                          Release
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="6" className="px-6 lg:px-8 py-16 lg:py-20 text-center">
+                  <td colSpan="7" className="px-6 lg:px-8 py-16 lg:py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="h-16 w-16 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
                         <ClipboardList className="h-8 w-8 text-gray-400" />

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { UserCircle, ChevronDown, Check, LogOut } from 'lucide-react';
+import { UserCircle, ChevronDown, Check, LogOut, Briefcase, ShoppingCart } from 'lucide-react';
 import { logoutUser } from '../../store/slices/authSlice';
 import { setActiveDivision } from '../../store/slices/divisionSlice';
 
@@ -12,8 +12,13 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
 
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
+  const { currentCustomer } = useSelector(state => state.customers || {});
+  
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
+
+  // Extract customer name for "Corporate" fallback
+  const fallbackCustomerName = currentCustomer?.customerName || user?.customer?.customerName || user?.customerName || 'Customer';
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -31,6 +36,13 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
       return fullDetails || { _id: id, divisionName: `Division ${String(id).slice(-4)}` };
     });
   }, [user, allDivisions]);
+
+  // Determine if we should show the division context switcher.
+  // We hide it completely if the user's ONLY division is "Corporate" (case-insensitive).
+  const showDivisionContext = availableDivisions.length > 0 && availableDivisions.some(div => {
+    const divName = div?.divisionName || '';
+    return divName.toLowerCase() !== 'corporate';
+  });
 
   const handleSwitchDivision = (div) => {
     const divId = div?._id || div;
@@ -74,16 +86,32 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
               {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Authorized User'}
             </p>
             <p className="text-[10px] font-bold text-slate-500 truncate mt-1 uppercase tracking-widest">{user?.email || 'user@example.com'}</p>
-            <p className="text-[8px] bg-gray-300 p-1 rounded inline font-bold text-slate-500 truncate mt-1 uppercase tracking-widest">{user?.chargeCode || 'No Charge Code'}</p>
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              <span className="text-[9px] bg-slate-100 border border-slate-200 px-2 py-1 rounded-md font-bold text-slate-600 truncate uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                <Briefcase size={10} className="text-slate-400" /> {user?.chargeCode || 'No Charge Code'}
+              </span>
+              {user?.orderLimit !== undefined && user?.orderLimit !== null && (
+                <span className="text-[9px] bg-slate-100 border border-slate-200 px-2 py-1 rounded-md font-bold text-slate-600 truncate uppercase tracking-widest flex items-center gap-1 shadow-sm">
+                  <ShoppingCart size={10} className="text-slate-400" /> Limit: {user.orderLimit}
+                </span>
+              )}
+            </div>
           </div>
 
-          {availableDivisions.length > 0 && (
+          {showDivisionContext && (
             <div className="p-3 border-b border-slate-100/80 bg-slate-50/50">
               <p className="px-3 pb-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Active Division Context</p>
               <div className="max-h-40 overflow-y-auto custom-scrollbar space-y-1 pr-1">
                 {availableDivisions.map((div) => {
                   const divId = div?._id || div;
-                  const divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
+                  let divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
+                  
+                  // Auto-replace generic 'Corporate' division strings with the Customer Name
+                  if (divName.toLowerCase() === 'corporate') {
+                    divName = div?.customer?.customerName || fallbackCustomerName;
+                  }
+
                   const isCurrentlySelected = divId === activeDivId;
 
                   return (

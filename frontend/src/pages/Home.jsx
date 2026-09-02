@@ -25,7 +25,13 @@ export default function Home() {
 
   // Dynamically determine the context name for the UI
   const customerName = currentCustomer?.customerName || user?.customer?.customerName || user?.customerName || 'System';
-  const divisionName = activeDivObj?.divisionName ? ` - ${activeDivObj.divisionName}` : '';
+  
+  // Check if division is "corporate" (case-insensitive) to hide it
+  const rawDivisionName = activeDivObj?.divisionName;
+  const divisionName = rawDivisionName && rawDivisionName.toLowerCase() !== 'corporate' 
+    ? ` - ${rawDivisionName}` 
+    : '';
+    
   const contextName = `${customerName}${divisionName}`;
 
   // --- UNIFIED FRONTEND RBAC CHECK ---

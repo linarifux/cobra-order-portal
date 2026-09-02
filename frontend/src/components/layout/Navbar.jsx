@@ -116,8 +116,13 @@ export default function Navbar() {
 
   // --- Data Variables (Safely evaluated ONLY after loading is finished) ---
   const displayCustomerName = currentCustomer?.customerName;
-  const displayDivisionName = activeDivObj?.divisionName || null;
   const isBracco = Boolean(displayCustomerName?.toLowerCase().includes('bracco'));
+  
+  // Determine division name display (excluding "Corporate")
+  const rawDivisionName = activeDivObj?.divisionName || null;
+  const displayDivisionName = rawDivisionName && rawDivisionName.toLowerCase() !== 'corporate' 
+    ? rawDivisionName 
+    : null;
 
   return (
     <>
@@ -181,6 +186,7 @@ export default function Navbar() {
                     initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
                     className="absolute -top-1 -right-1 sm:-top-1.5 sm:-right-1.5 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-lg bg-red-500 text-[9px] sm:text-[10px] font-black text-white shadow-md ring-2 ring-white/80"
                   >
+                    
                     {cartCount}
                   </motion.span>
                 )}

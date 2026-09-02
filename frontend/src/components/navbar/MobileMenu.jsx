@@ -11,8 +11,13 @@ export default function MobileMenu({ isOpen, onClose, navLinks }) {
 
   const { user } = useSelector(state => state.auth || {});
   const { items: allDivisions = [] } = useSelector(state => state.divisions || {});
+  const { currentCustomer } = useSelector(state => state.customers || {});
+  
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
+
+  // Extract customer name for "Corporate" fallback
+  const fallbackCustomerName = currentCustomer?.customerName || user?.customer?.customerName || user?.customerName || 'Customer';
 
   const availableDivisions = React.useMemo(() => {
     if (!user?.divisions) return [];
@@ -23,7 +28,13 @@ export default function MobileMenu({ isOpen, onClose, navLinks }) {
     });
   }, [user, allDivisions]);
 
-  
+  // Determine if we should show the division context switcher.
+  // We hide it completely if the user's ONLY division is "Corporate" (case-insensitive).
+  const showDivisionContext = availableDivisions.length > 0 && availableDivisions.some(div => {
+    const divName = div?.divisionName || '';
+    return divName.toLowerCase() !== 'corporate';
+  });
+
   const handleSwitchDivision = (div) => {
     const divId = div?._id || div;
     if (divId !== activeDivId) {
@@ -58,32 +69,42 @@ export default function MobileMenu({ isOpen, onClose, navLinks }) {
       </div>
       
       <div className="border-t border-slate-200 pt-4 space-y-2">
-        <p className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Workspace Context</p>
-        <div className="max-h-48 overflow-y-auto space-y-1 mb-2 custom-scrollbar">
-          {availableDivisions.map((div) => {
-            const divId = div?._id || div;
-            const divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
-            const isCurrentlySelected = divId === activeDivId;
+        {showDivisionContext && (
+          <>
+            <p className="px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">Workspace Context</p>
+            <div className="max-h-48 overflow-y-auto space-y-1 mb-2 custom-scrollbar">
+              {availableDivisions.map((div) => {
+                const divId = div?._id || div;
+                let divName = div?.divisionName || `Division ${String(divId).slice(-4)}`;
+                
+                // Auto-replace generic 'Corporate' division strings with the Customer Name
+                if (divName.toLowerCase() === 'corporate') {
+                  divName = div?.customer?.customerName || fallbackCustomerName;
+                }
 
-            return (
-              <button
-                key={divId}
-                onClick={() => handleSwitchDivision(div)}
-                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left transition-all ${
-                  isCurrentlySelected 
-                    ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' 
-                    : 'text-slate-600 hover:bg-slate-50 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-3 truncate">
-                  <Building2 className={`h-4 w-4 shrink-0 ${isCurrentlySelected ? 'text-blue-600' : 'text-slate-400'}`} />
-                  <span className="text-sm truncate pr-3">{divName}</span>
-                </div>
-                {isCurrentlySelected && <Check size={16} className="text-blue-600 shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
+                const isCurrentlySelected = divId === activeDivId;
+
+                return (
+                  <button
+                    key={divId}
+                    onClick={() => handleSwitchDivision(div)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left transition-all ${
+                      isCurrentlySelected 
+                        ? 'bg-blue-50 text-blue-700 font-bold border border-blue-100' 
+                        : 'text-slate-600 hover:bg-slate-50 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <Building2 className={`h-4 w-4 shrink-0 ${isCurrentlySelected ? 'text-blue-600' : 'text-slate-400'}`} />
+                      <span className="text-sm truncate pr-3">{divName}</span>
+                    </div>
+                    {isCurrentlySelected && <Check size={16} className="text-blue-600 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
         
         <button 
           onClick={handleLogout} 

@@ -11,7 +11,6 @@ export const fetchCarriers = createAsyncThunk(
       // If a divisionId is passed, hit the nested route. Otherwise, fetch all.
       const url = divisionId ? `/divisions/${divisionId}/carriers` : `/carriers`;
       const response = await api.get(url);
-      
       // Defensive fallback against API wrapping changes
       return response.data.data.carriers || response.data.data || [];
     } catch (error) {

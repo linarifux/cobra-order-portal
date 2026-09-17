@@ -10,6 +10,7 @@ import {
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase, AlertTriangle
 } from 'lucide-react';
 
+
 // Robust internal component to handle checkout image loading and error fallbacks
 const CheckoutItemImage = ({ src, alt }) => {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -304,6 +305,7 @@ export default function Checkout() {
         qtyLimitExceeds: cartItems.some(item => item.qtyLimitExceeds), // Evaluates if any item in cart exceeds its threshold
         shippingAddress: {
           recipientName: `${addressForm.firstName} ${addressForm.lastName}`.trim(),
+          companyName: addressForm.company, // INCLUDED COMPANY NAME HERE
           email: addressForm.contactEmail,
           phone: addressForm.contactPhone,
           line1: addressForm.street1,

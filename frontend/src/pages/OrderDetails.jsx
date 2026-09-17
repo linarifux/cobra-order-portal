@@ -211,7 +211,8 @@ export default function OrderDetails() {
                 
                 {/* Contact Snippets */}
                 <div className="space-y-2">
-                  <span className="block font-extrabold text-gray-900 mb-1 text-sm sm:text-base">{addr?.recipientName || 'N/A'}</span>
+                  <span className="block font-extrabold text-gray-900 mb-1 text-sm sm:text-base">{addr?.recipientName}</span>
+                  <span className='text-gray-500 font-semibold text-lg'>{addr?.companyName}</span>
                   {addr?.email && (
                     <div className="flex items-center gap-2 text-gray-500 font-semibold truncate">
                       <Mail className="h-3.5 w-3.5" /> <a href={`mailto:${addr.email}`} className="hover:text-blue-600 truncate">{addr.email}</a>

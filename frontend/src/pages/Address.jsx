@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { 
   MapPin, Plus, Search, Edit2, Trash2, 
-  Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check, Users
+  Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check, Users, Building2
 } from 'lucide-react';
 
 import { 
@@ -17,6 +17,7 @@ import {
 const EMPTY_FORM = {
   firstName: '', 
   lastName: '',
+  companyName: '', // Corrected mapping to match backend schema exactly
   phone: '', 
   email: '', 
   street1: '', 
@@ -79,6 +80,7 @@ export default function Address() {
       isPrimaryUserAddress: true, // Flag to differentiate from secondary address collection
       firstName,
       lastName,
+      companyName: user.companyName || '', // Mapped company if present
       phone: user.phone || '',
       email: user.email || '',
       street1: user.userAddress.street1 || '',
@@ -112,8 +114,11 @@ export default function Address() {
     return combinedAddresses.filter(addr => {
       const query = searchQuery.toLowerCase();
       const fullName = `${addr.firstName || ''} ${addr.lastName || ''}`.toLowerCase();
+      const companyVal = (addr.companyName || '').toLowerCase();
+      
       return (
         fullName.includes(query) ||
+        companyVal.includes(query) ||
         (addr.city || '').toLowerCase().includes(query) ||
         (addr.addressType || '').toLowerCase().includes(query)
       );
@@ -276,6 +281,11 @@ export default function Address() {
                   </div>
                   <div className="min-w-0 pr-2 flex-1">
                     <h3 className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight truncate">{addr.firstName} {addr.lastName}</h3>
+                    {addr.companyName && (
+                      <p className="text-[11px] font-semibold text-gray-500 truncate mt-0.5 flex items-center gap-1.5">
+                        <Building2 size={10} /> {addr.companyName}
+                      </p>
+                    )}
                     <div className="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-gray-500 mt-1">
                       <Tag className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                       <span>{addr.addressType}</span>
@@ -315,12 +325,13 @@ export default function Address() {
                 <div className="flex items-start gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600">
                   <MapPin className="h-4 w-4 text-blue-500/70 mt-0.5 flex-shrink-0" />
                   <span className="leading-relaxed">
-                    <span className="text-gray-900">{addr.street1}</span>
+                    {addr.companyName && <><span className="text-gray-900 font-bold">{addr.companyName}</span><br /></>}
+                    <span className={addr.companyName ? "text-gray-600" : "text-gray-900"}>{addr.street1}</span>
                     {addr.street2 && <><br />{addr.street2}</>}
                     <br />
                     {addr.city}, {addr.state} {addr.zipCode}
                     <br />
-                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs">{addr.country}</span>
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs block mt-1">{addr.country}</span>
                   </span>
                 </div>
                 {addr.phone && (
@@ -378,6 +389,12 @@ export default function Address() {
               <div className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-4 sm:space-y-5 custom-scrollbar bg-slate-50/50">
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div className="col-span-1 sm:col-span-2">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Company Name <span className="normal-case tracking-normal font-medium text-slate-400">(Optional)</span></label>
+                    <input type="text" name="companyName" value={formData.companyName || ''} onChange={handleInputChange}
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      placeholder="Acme Corp" />
+                  </div>
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">First Name <span className="text-red-500">*</span></label>
                     <input required type="text" name="firstName" value={formData.firstName || ''} onChange={handleInputChange}

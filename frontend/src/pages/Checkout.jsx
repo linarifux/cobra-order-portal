@@ -117,9 +117,9 @@ export default function Checkout() {
       _id: 'primary-user-address',
       firstName,
       lastName,
-      company: '', 
-      contactPhone: user.phone || '',
-      contactEmail: user.email || '',
+      companyName: user.companyName || '', // Mapped strictly to Address Schema property names
+      phone: user.phone || '', 
+      email: user.email || '', 
       street1: user.userAddress.street1 || '',
       street2: user.userAddress.street2 || '',
       city: user.userAddress.city || '',
@@ -193,18 +193,19 @@ export default function Checkout() {
         let dbCountry = addr.country || 'US';
         if (dbCountry === 'United States' || dbCountry === 'USA') dbCountry = 'US';
 
+        // Properly map Address Book Schema property names to Checkout Form state keys
         setAddressForm({
           firstName: addr.firstName || '',
           lastName: addr.lastName || '',
-          company: addr.company || '',
+          company: addr.companyName || addr.company || '', 
           street1: addr.street1 || '',
           street2: addr.street2 || '',
           city: addr.city || '',
           state: addr.state || '',
           zipCode: addr.zipCode || '',
           country: dbCountry,
-          contactPhone: addr.contactPhone || '',
-          contactEmail: addr.contactEmail || '',
+          contactPhone: addr.phone || addr.contactPhone || '', 
+          contactEmail: addr.email || addr.contactEmail || '', 
         });
         setSaveToAddressBook(false);
       }
@@ -264,10 +265,20 @@ export default function Checkout() {
     let finalAddressId = selectedAddressId;
 
     try {
-      // 1. Create/Save Address if selected
+      // 1. Create/Save Address if selected - Properly reverse-map keys back to Address schema
       if (!finalAddressId && saveToAddressBook) {
         const payload = {
-          ...addressForm,
+          firstName: addressForm.firstName,
+          lastName: addressForm.lastName,
+          companyName: addressForm.company, 
+          phone: addressForm.contactPhone,  
+          email: addressForm.contactEmail,  
+          street1: addressForm.street1,
+          street2: addressForm.street2,
+          city: addressForm.city,
+          state: addressForm.state,
+          zipCode: addressForm.zipCode,
+          country: addressForm.country || 'US',
           user: user._id,
           addressType: 'Shipping',
           isDefault: false
@@ -305,7 +316,7 @@ export default function Checkout() {
         qtyLimitExceeds: cartItems.some(item => item.qtyLimitExceeds), // Evaluates if any item in cart exceeds its threshold
         shippingAddress: {
           recipientName: `${addressForm.firstName} ${addressForm.lastName}`.trim(),
-          companyName: addressForm.company, // INCLUDED COMPANY NAME HERE
+          companyName: addressForm.company, 
           email: addressForm.contactEmail,
           phone: addressForm.contactPhone,
           line1: addressForm.street1,
@@ -427,11 +438,14 @@ export default function Checkout() {
                     className={`${premiumInputClass} cursor-pointer appearance-none disabled:opacity-50`}
                   >
                     <option value="">Select a saved address...</option>
-                    {combinedAddresses.map((addr) => (
-                      <option key={addr._id} value={addr._id}>
-                        {addr.firstName} {addr.lastName} {addr.company ? `(${addr.company})` : ''} - {addr.street1}, {addr.city} {addr._id === 'primary-user-address' ? '(Profile Default)' : ''}
-                      </option>
-                    ))}
+                    {combinedAddresses.map((addr) => {
+                       const companyDisplay = addr.companyName || addr.company || '';
+                       return (
+                        <option key={addr._id} value={addr._id}>
+                          {addr.firstName} {addr.lastName} {companyDisplay ? `(${companyDisplay})` : ''} - {addr.street1}, {addr.city} {addr._id === 'primary-user-address' ? '(Profile Default)' : ''}
+                        </option>
+                       )
+                    })}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
                     {addressStatus === 'loading' ? (

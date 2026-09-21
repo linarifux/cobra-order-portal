@@ -7,6 +7,7 @@ import { fetchOrders, updateOrder } from '../store/slices/orderSlice';
 
 export default function Orders() {
   const dispatch = useDispatch();
+
   
   // Extract user context from Redux auth slice and active division
   const { user } = useSelector(state => state.auth);
@@ -25,6 +26,9 @@ export default function Orders() {
   
   // Specifically check if the user is a superuser or admin who can release orders
   const canReleaseOrder = ['super_user', 'super_admin', 'admin'].includes(user?.role) || user?.portal === 'admin';
+
+  // Specific check to expose internal financials
+  const canViewCosts = user?.showCostsInCp === true || ['admin', 'super_admin'].includes(user?.role);
 
   // Fetch fresh orders scoped to the current user OR full scope for privileged users
   useEffect(() => {
@@ -59,6 +63,7 @@ export default function Orders() {
       return isDivisionMatch && isUserMatch;
     });
 
+
     // Clone and sort array to guarantee most recent transactions appear at the very top
     const sorted = [...scopedOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -91,7 +96,7 @@ export default function Orders() {
   };
 
   const formatMoney = (amount) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount || 0);
   };
 
   const formatDate = (dateString) => {
@@ -217,22 +222,25 @@ export default function Orders() {
                   <p className="text-sm font-extrabold text-gray-900">{formatMoney(order.totalAmount)}</p>
                 </div>
               </div>
+
+              {canViewCosts && (
+                <div className="grid grid-cols-2 gap-4 mb-4 border-b border-white/50 pb-4">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Shipping</p>
+                    <p className="text-sm font-medium text-gray-700">{formatMoney(order.shippingDetails?.shippingCost)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Processing</p>
+                    <p className="text-sm font-medium text-gray-700">{formatMoney(order.processingFees?.totalProcessingFee)}</p>
+                  </div>
+                </div>
+              )}
               
               <div className="flex justify-between items-end">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Recipient Destination</p>
                   <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
                   <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Charge Code</p>
-                  {order.chargeCode ? (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 text-slate-700 rounded-md text-[10px] font-bold tracking-widest shadow-sm">
-                      <Briefcase size={12} className="text-slate-400" /> {order.chargeCode}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-400 font-medium italic">Not Set</span>
-                  )}
                 </div>
               </div>
             </div>
@@ -257,7 +265,8 @@ export default function Orders() {
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Order ID</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Date</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Recipient</th>
-                <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Charge Code</th>
+                {canViewCosts && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Shipping</th>}
+                {canViewCosts && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Processing</th>}
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Total</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Status</th>
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Actions</th>
@@ -282,15 +291,16 @@ export default function Orders() {
                       <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
                       <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
                     </td>
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
-                      {order.chargeCode ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-[10px] font-bold tracking-widest shadow-sm">
-                          <Briefcase size={12} className="text-slate-400" /> {order.chargeCode}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400 font-medium italic">Not Set</span>
-                      )}
-                    </td>
+                    {canViewCosts && (
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
+                        {formatMoney(order.shippingDetails?.shippingCost)}
+                      </td>
+                    )}
+                    {canViewCosts && (
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
+                        {formatMoney(order.processingFees?.totalProcessingFee)}
+                      </td>
+                    )}
                     <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
                       {formatMoney(order.totalAmount)}
                     </td>
@@ -318,7 +328,7 @@ export default function Orders() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="7" className="px-6 lg:px-8 py-16 lg:py-20 text-center">
+                  <td colSpan={canViewCosts ? 8 : 6} className="px-6 lg:px-8 py-16 lg:py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="h-16 w-16 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
                         <ClipboardList className="h-8 w-8 text-gray-400" />

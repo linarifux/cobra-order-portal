@@ -24,6 +24,7 @@ export const loginUser = createAsyncThunk(
         body: JSON.stringify(credentials),
       });
 
+      
       const data = await response.json();
 
       if (!response.ok) {

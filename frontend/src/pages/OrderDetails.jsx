@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderById, clearCurrentOrder } from '../store/slices/orderSlice';
 import { 
@@ -20,8 +20,6 @@ const getTrackingUrl = (carrier, trackingNumber) => {
   if (c.includes('dhl')) return `https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id=${encodedTracking}`;
   if (c.includes('canada post')) return `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${encodedTracking}`;
   
-  // Fallback to Google if carrier is unknown/custom
-  return `https://www.google.com/search?q=${encodeURIComponent(`${carrier || ''} tracking ${trackingNumber}`)}`;
 };
 
 export default function OrderDetails() {
@@ -30,6 +28,7 @@ export default function OrderDetails() {
   const dispatch = useDispatch();
 
   const { currentOrder: order, detailsStatus, error } = useSelector(state => state.orders);
+  const { user: currentUser } = useSelector(state => state.auth);
 
   useEffect(() => {
     dispatch(fetchOrderById(id));
@@ -110,9 +109,14 @@ export default function OrderDetails() {
     const w = Number(item.weight) || Number(item.product?.weight) || 0;
     return acc + (w * item.quantity);
   }, 0);
+
+  console.log(order,currentUser)
   
   const totalWeightLbs = Math.floor(totalWeightInOunces / 16);
   const totalWeightOz = +(totalWeightInOunces % 16).toFixed(1);
+
+  // Check if current user has the explicit flag to show costs OR is an admin/super_admin
+  const canViewCosts = currentUser?.showCostsInCp || ['admin', 'super_admin'].includes(currentUser?.role);
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 px-4 lg:px-0 pb-12">
@@ -399,12 +403,22 @@ export default function OrderDetails() {
                 </div>
               )}
 
+              {canViewCosts && (
+                <div className="flex justify-between items-center text-gray-600 font-medium">
+                  <span>Processing Fees</span>
+                  <span className="font-bold text-gray-900">
+                    {formatMoney(order?.processingFees?.totalProcessingFee || 0)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
                 <span className="font-bold text-gray-900">
                   {formatMoney(ship?.shippingCost || 0)}
                 </span>
               </div>
+              
               <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
                 <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
                 <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">

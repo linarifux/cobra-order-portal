@@ -109,8 +109,6 @@ export default function OrderDetails() {
     const w = Number(item.weight) || Number(item.product?.weight) || 0;
     return acc + (w * item.quantity);
   }, 0);
-
-  console.log(order,currentUser)
   
   const totalWeightLbs = Math.floor(totalWeightInOunces / 16);
   const totalWeightOz = +(totalWeightInOunces % 16).toFixed(1);
@@ -383,12 +381,13 @@ export default function OrderDetails() {
               })}
             </div>
 
+
             {/* Financial Calculations */}
             <div className="p-5 sm:p-6 space-y-3 sm:space-y-4 text-xs sm:text-sm bg-white/40">
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span className="font-bold text-gray-900">
-                  {formatMoney((order.totalAmount || 0) - (ship?.shippingCost || 0))}
+                  {formatMoney((order.subtotal))}
                 </span>
               </div>
               
@@ -423,6 +422,7 @@ export default function OrderDetails() {
                 <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
                 <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
                   {formatMoney(order.totalAmount)}
+                  {console.log(order)}
                 </span>
               </div>
             </div>

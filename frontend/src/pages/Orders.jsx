@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { Download, Loader2, AlertCircle, Search, ClipboardList, Briefcase, Unlock } from 'lucide-react';
+import { Download, Loader2, AlertCircle, Search, ClipboardList, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchOrders, updateOrder } from '../store/slices/orderSlice';
 
 export default function Orders() {
   const dispatch = useDispatch();
 
-  
   // Extract user context from Redux auth slice and active division
   const { user } = useSelector(state => state.auth);
   const activeDivision = useSelector((state) => state.divisions?.activeDivision);
@@ -24,8 +23,8 @@ export default function Orders() {
   // --- UNIFIED FRONTEND RBAC CHECK ---
   const isPrivileged = user?.portal === 'admin' || user?.role === 'super_user';
   
-  // Specifically check if the user is a superuser or admin who can release orders
-  const canReleaseOrder = ['super_user', 'super_admin', 'admin'].includes(user?.role) || user?.portal === 'admin';
+  // Specifically check if the user is a superuser or admin who can release orders, OR if they have the explicit flag
+  const canReleaseOrder = (['super_user', 'super_admin', 'admin'].includes(user?.role) && user?.releasePendingOrders === true) || user?.portal === 'admin' ;
 
   // Specific check to expose internal financials
   const canViewCosts = user?.showCostsInCp === true || ['admin', 'super_admin'].includes(user?.role);
@@ -62,7 +61,6 @@ export default function Orders() {
 
       return isDivisionMatch && isUserMatch;
     });
-
 
     // Clone and sort array to guarantee most recent transactions appear at the very top
     const sorted = [...scopedOrders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -146,9 +144,6 @@ export default function Orders() {
       </div>
     );
   }
-
-  
-
 
   return (
     <div className="relative space-y-6 animate-in fade-in duration-700 px-4 sm:px-0">

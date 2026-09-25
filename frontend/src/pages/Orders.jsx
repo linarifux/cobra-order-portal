@@ -48,8 +48,12 @@ export default function Orders() {
   const filteredOrders = useMemo(() => {
     if (!orders || !userId) return [];
 
-    // Filter array to strictly guarantee scope based on role
+    // Filter array to strictly guarantee scope based on role AND restrict to WEBORD type
     const scopedOrders = orders.filter(order => {
+      // Only include WEBORD type orders (fallback to WEBORD if orderType is undefined)
+      const orderType = order.orderType || 'WEBORD';
+      if (orderType !== 'WEBORD') return false;
+
       const orderDivisionId = String(order.division?._id || order.division || '');
       const orderUserId = String(order.user?._id || order.user || '');
       const currentUserId = String(userId);

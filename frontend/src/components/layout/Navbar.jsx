@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion'; 
 import { Box, Home, Package, ClipboardList, MapPin, Menu, X, ShoppingCart, Building2 } from 'lucide-react';
 
-import { setActiveDivision, fetchDivisions } from '../../store/slices/divisionSlice';
+import { setActiveDivision, fetchDivisions, fetchDivisionById } from '../../store/slices/divisionSlice';
 import { fetchCartDb } from '../../store/slices/cartSlice'; 
 import { fetchCustomerById } from '../../store/slices/customerSlice'; 
 
@@ -27,12 +27,12 @@ export default function Navbar() {
   
   // Extract statuses to monitor loading phases
   const { user, status: authStatus } = useSelector(state => state.auth || {});
-  const { items: allDivisions = [], status: divisionStatus } = useSelector(state => state.divisions || {});
+  const { items: allDivisions = [], currentDivision, status: divisionStatus } = useSelector(state => state.divisions || {});
   const { currentCustomer, status: customerStatus } = useSelector(state => state.customers || {}); 
   
   const activeDivisionRaw = useSelector(state => state.divisions?.activeDivision);
   const activeDivId = typeof activeDivisionRaw === 'object' ? activeDivisionRaw?._id : activeDivisionRaw;
-  
+
   // Safely Auto-select division inside a useEffect
   useEffect(() => {
     if (user?.divisions?.length === 1 && !activeDivId) {
@@ -40,9 +40,16 @@ export default function Navbar() {
     }
   }, [user?.divisions, activeDivId, dispatch]);
 
-  const activeDivObj = typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
+  // Fetch the full division object when the active division changes
+  useEffect(() => {
+    if (activeDivId) {
+      dispatch(fetchDivisionById(activeDivId));
+    }
+  }, [activeDivId, dispatch]);
+
+  const activeDivObj = currentDivision || (typeof activeDivisionRaw === 'object' && activeDivisionRaw !== null
     ? activeDivisionRaw 
-    : allDivisions.find(d => d._id === activeDivisionRaw);
+    : allDivisions.find(d => d._id === activeDivisionRaw));
 
   // --- Fetch Customer Data ---
   const customerId = user?.customer?._id || user?.customer;
@@ -99,8 +106,6 @@ export default function Navbar() {
   if (location.pathname === '/login') return null; 
 
   // --- STRICT DATA READINESS CHECK ---
-  // We evaluate if auth, divisions, or customers are loading.
-  // We also strictly ensure the customer ID in Redux matches the User's exact Customer ID.
   const isDataPending = 
     authStatus === 'loading' || 
     divisionStatus === 'loading' || 
@@ -114,7 +119,7 @@ export default function Navbar() {
     );
   }
 
-  // --- Data Variables (Safely evaluated ONLY after loading is finished) ---
+  // --- Data Variables ---
   const displayCustomerName = currentCustomer?.customerName;
   const isBracco = Boolean(displayCustomerName?.toLowerCase().includes('bracco'));
   
@@ -123,6 +128,9 @@ export default function Navbar() {
   const displayDivisionName = rawDivisionName && rawDivisionName.toLowerCase() !== 'corporate' 
     ? rawDivisionName 
     : null;
+
+  // Resolve Logo
+  const divisionLogo = activeDivObj?.divisionLogo;
 
   return (
     <>
@@ -133,8 +141,14 @@ export default function Navbar() {
           <div className="flex items-center gap-6 sm:gap-8 xl:gap-12 min-w-0">
             <Link to="/" className="flex items-center gap-2 sm:gap-3 group shrink-0 min-w-0">
               
-              {/* Conditional Logo Rendering */}
-              {isBracco ? (
+              {/* Dynamic Logo Rendering */}
+              {divisionLogo ? (
+                <img 
+                  src={divisionLogo} 
+                  alt="Division Logo" 
+                  className="h-9 sm:h-11 w-auto max-w-[120px] object-contain shrink-0 transition-transform duration-300 group-hover:scale-105 drop-shadow-sm" 
+                />
+              ) : isBracco ? (
                 <img 
                   src={BracoLogo} 
                   alt="Bracco Logo" 
@@ -147,7 +161,7 @@ export default function Navbar() {
               )}
               
               {/* Customer and Division Labels */}
-              {displayCustomerName && !isBracco && (
+              {displayCustomerName && !isBracco && !divisionLogo && (
                 <div className="hidden sm:flex flex-col min-w-0">
                   <h1 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-none truncate max-w-[200px] lg:max-w-[250px]" title={displayCustomerName}>
                     {displayCustomerName}

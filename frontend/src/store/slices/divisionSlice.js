@@ -21,7 +21,8 @@ const getStoredActiveDivision = () => {
   }
 };
 
-// --- Thunk ---
+// --- Thunks ---
+
 // Fetches the active workspace options allocated to the user's business profile
 export const fetchDivisions = createAsyncThunk(
   'divisions/fetchAll',
@@ -37,10 +38,26 @@ export const fetchDivisions = createAsyncThunk(
   }
 );
 
+// NEW: Fetches a single specific division by its ID
+export const fetchDivisionById = createAsyncThunk(
+  'divisions/fetchById',
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/divisions/${id}`);
+      return response.data?.data?.division || response.data?.data;
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || error.message || 'Failed to fetch division details'
+      );
+    }
+  }
+);
+
 const divisionSlice = createSlice({
   name: 'divisions',
   initialState: {
     items: [],
+    currentDivision: null, // Holds the deep details of a single division
     activeDivision: getStoredActiveDivision(), // Hydrated automatically on app startup
     status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
     error: null
@@ -69,15 +86,20 @@ const divisionSlice = createSlice({
     },
     clearDivisionContext: (state) => {
       state.items = [];
+      state.currentDivision = null;
       state.activeDivision = null;
       state.status = 'idle';
       state.error = null;
       localStorage.removeItem('dsm_active_division');
       localStorage.removeItem('dsm_active_division_name');
+    },
+    clearCurrentDivision: (state) => {
+      state.currentDivision = null;
     }
   },
   extraReducers: (builder) => {
     builder
+      // --- Fetch All ---
       .addCase(fetchDivisions.pending, (state) => {
         state.status = 'loading';
         state.error = null;
@@ -99,9 +121,23 @@ const divisionSlice = createSlice({
       .addCase(fetchDivisions.rejected, (state, action) => {
         state.status = 'failed';
         state.error = action.payload;
+      })
+      
+      // --- Fetch Single by ID ---
+      .addCase(fetchDivisionById.pending, (state) => {
+        state.status = 'loading';
+        state.error = null;
+      })
+      .addCase(fetchDivisionById.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.currentDivision = action.payload;
+      })
+      .addCase(fetchDivisionById.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload;
       });
   }
 });
 
-export const { setActiveDivision, clearDivisionContext } = divisionSlice.actions;
+export const { setActiveDivision, clearDivisionContext, clearCurrentDivision } = divisionSlice.actions;
 export default divisionSlice.reducer;

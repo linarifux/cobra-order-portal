@@ -128,13 +128,13 @@ export default function ProductDetails() {
     status: rawProduct.status || 'Active',
     
     // Strict numeric casting to prevent UI crashes
-    available: Number(rawProduct.available || rawProduct.unitsOnHand || 0),
+    available: Number(rawProduct.available || 0),
     min: Number(rawProduct.safetyBuffer || rawProduct.min || 0),
     max: rawProduct.max || '-', 
     onOrder: Number(rawProduct.pipelineSupply || rawProduct.openOrders || rawProduct.onOrder || 0),
     price: Number(rawProduct.price || 0),
     cost: Number(rawProduct.unitCost || rawProduct.cost || rawProduct.price || 0),
-    valuation: Number(rawProduct.totalValuation || ((rawProduct.price || 0) * (rawProduct.available || rawProduct.unitsOnHand || 0))),
+    valuation: Number(rawProduct.totalValuation || ((rawProduct.price || 0) * (rawProduct.available || 0))),
     weight: Number(rawProduct.weight || 0)
   } : null;
 

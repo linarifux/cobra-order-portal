@@ -110,7 +110,7 @@ export default function Products() {
         weight: item.weight || 0,
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
-        available: item.available || item.unitsOnHand || 0,
+        available: item.available || 0,
         onOrder: item.pipelineSupply || item.openOrders || item.onOrder || 0,
         cat1: item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General'),
         cat2: item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null),

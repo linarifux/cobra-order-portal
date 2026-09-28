@@ -117,7 +117,7 @@ export default function ProductTable({
 
               // Bulletproof numerics
               const price = Number(product.price || product.cost || 0);
-              const available = Number(product.available || product.unitsOnHand || 0);
+              const available = Number(product.available || 0);
               const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
               
               // Limit warning checks
@@ -232,7 +232,7 @@ export default function ProductTable({
                   .join(' > ') || product.displayCategory || 'General';
                 // Bulletproof numerics
                 const price = Number(product.price || product.cost || 0);
-                const available = Number(product.available || product.unitsOnHand || 0);
+                const available = Number(product.available || 0);
                 const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
                 
                 // Limit warning checks

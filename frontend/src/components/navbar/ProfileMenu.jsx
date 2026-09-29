@@ -59,6 +59,9 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
     navigate('/login');
   };
 
+  const userRole = user?.role === 'super_user' ? 'Super User' : user?.role === 'standard_user' ? 'Standard User' : user?.role === 'account_manager' ? 'Account Manager' : 'Guest';
+
+
   return (
     <div className="relative hidden sm:block" ref={dropdownRef}>
       <button 
@@ -83,7 +86,7 @@ export default function ProfileMenu({ isOpen, onToggle, onClose }) {
           
           <div className="px-6 py-5 border-b border-slate-200/60 bg-white/40">
             <p className="text-sm font-black text-slate-900 truncate">
-              {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Authorized User'}
+              {user?.name || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Authorized User'} <span className="text-[9px] font-bold text-slate-500 ml-1">{userRole}</span>
             </p>
             <p className="text-[10px] font-bold text-slate-500 truncate mt-1 uppercase tracking-widest">{user?.email || 'user@example.com'}</p>
             

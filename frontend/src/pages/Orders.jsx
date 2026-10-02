@@ -119,6 +119,90 @@ export default function Orders() {
     }
   };
 
+  const handleExportCSV = () => {
+    if (filteredOrders.length === 0) {
+      return toast.warning("No orders to export.");
+    }
+
+    try {
+      // Define CSV Headers
+      const headers = [
+        "Order Number",
+        "Date",
+        "Status",
+        "Customer/Brand",
+        "Division",
+        "Shopper Email",
+        "Recipient Name",
+        "Recipient Company",
+        "Address",
+        "City",
+        "State",
+        "Zip",
+        "Country",
+        "Carrier",
+        "Service",
+        "Tracking",
+        "Item Quantity",
+        "Subtotal",
+        "Shipping Cost",
+        "Processing Fees",
+        "Total Amount"
+      ];
+
+      // Map Order Data to CSV Rows
+      const csvRows = filteredOrders.map(o => {
+        const itemQtyCount = o.items ? o.items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0) : 0;
+        
+        return [
+          o.orderNumber || '',
+          new Date(o.createdAt).toLocaleDateString('en-US'),
+          o.status || '',
+          o.customer?.customerName || '',
+          o.division?.divisionName || '',
+          o.user?.email || '',
+          o.shippingAddress?.recipientName || '',
+          o.shippingAddress?.companyName || '',
+          `"${o.shippingAddress?.line1 || ''} ${o.shippingAddress?.line2 || ''}"`, // Quotes to handle commas in addresses
+          o.shippingAddress?.city || '',
+          o.shippingAddress?.state || '',
+          o.shippingAddress?.zip || '',
+          o.shippingAddress?.country || '',
+          o.shippingDetails?.carrierType || '',
+          o.shippingDetails?.serviceCode || '',
+          o.shippingDetails?.trackingNumber || '',
+          itemQtyCount,
+          (o.subtotal || 0).toFixed(2),
+          (o.shippingDetails?.shippingCost || 0).toFixed(2),
+          (o.processingFees?.totalProcessingFee || 0).toFixed(2),
+          (o.totalAmount || 0).toFixed(2)
+        ];
+      });
+
+      // Combine Headers and Rows
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => row.join(','))
+      ].join('\n');
+
+      // Create a Blob and Download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Orders_Export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast.success("Spreadsheet exported successfully.");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate CSV spreadsheet.");
+    }
+  };
+
   // --- Loader States ---
   if (status === 'loading' && orders.length === 0) {
     return (
@@ -180,8 +264,11 @@ export default function Orders() {
               className="w-full h-12 pl-11 pr-4 rounded-2xl border border-white/60 bg-white/50 text-sm font-medium text-gray-900 placeholder-gray-400 outline-none transition-all focus:bg-white focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm"
             />
           </div>
-          <button className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex-shrink-0">
-            <Download className="h-4 w-4" /> <span>Export</span>
+          <button 
+            onClick={handleExportCSV}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 transition-all active:scale-[0.98] flex-shrink-0"
+          >
+            <Download className="h-4 w-4" /> <span>Export Spreadsheet</span>
           </button>
         </div>
       </div>
@@ -348,3 +435,4 @@ export default function Orders() {
     </div>
   );
 }
+

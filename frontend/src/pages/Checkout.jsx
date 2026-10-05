@@ -5,6 +5,7 @@ import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice';
 import { fetchCarriers } from '../store/slices/carrierSlice';
 import api from '../utils/api';
+import zipState from 'zip-state';
 import {
   ArrowLeft, ArrowRight, ShoppingBag, MapPin,
   FileText, ShieldCheck, Loader2, Package, Check, Truck, AlertCircle, Briefcase, AlertTriangle
@@ -216,10 +217,27 @@ export default function Checkout() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    
     if (selectedAddressId) {
       setSelectedAddressId('');
     }
-    setAddressForm(prev => ({ ...prev, [name]: value }));
+
+    setAddressForm(prev => {
+      const nextState = { ...prev, [name]: value };
+      
+      // Auto-fill state if the zipCode is entered and valid
+      if (name === 'zipCode' && typeof value === 'string') {
+        const cleanZip = value.trim().slice(0, 5);
+        if (cleanZip.length === 5) {
+          const mappedState = zipState(cleanZip);
+          if (mappedState) {
+            nextState.state = mappedState;
+          }
+        }
+      }
+      
+      return nextState;
+    });
   };
 
   const getProductPrice = (product) => {
@@ -503,14 +521,15 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {/* ZIP and State Fields swapped */}
                 <div className="grid grid-cols-2 gap-4 sm:gap-5">
-                  <div className="col-span-1">
-                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
-                    <input type="text" name="state" value={addressForm.state} onChange={handleInputChange} className={premiumInputClass} />
-                  </div>
                   <div className="col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
                     <input type="text" name="zipCode" value={addressForm.zipCode} onChange={handleInputChange} className={premiumInputClass} />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
+                    <input type="text" name="state" value={addressForm.state} onChange={handleInputChange} className={premiumInputClass} />
                   </div>
                 </div>
 

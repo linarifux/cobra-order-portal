@@ -5,6 +5,7 @@ import {
   MapPin, Plus, Search, Edit2, Trash2, 
   Phone, Mail, X, Map, Loader2, AlertCircle, Star, Tag, Check, Users, Building2
 } from 'lucide-react';
+import zipState from 'zip-state';
 
 import { 
   fetchAddressesByUser, 
@@ -148,10 +149,24 @@ export default function Address() {
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
-    }));
+    const parsedValue = type === 'checkbox' ? checked : value;
+
+    setFormData(prev => {
+      const nextState = { ...prev, [name]: parsedValue };
+      
+      // Auto-fill state if the zipCode is entered
+      if (name === 'zipCode' && typeof parsedValue === 'string') {
+        const cleanZip = parsedValue.trim().slice(0, 5);
+        if (cleanZip.length === 5) {
+          const mappedState = zipState(cleanZip);
+          if (mappedState) {
+            nextState.state = mappedState;
+          }
+        }
+      }
+      
+      return nextState;
+    });
   };
 
   const handleSave = async (e) => {
@@ -446,17 +461,17 @@ export default function Address() {
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="Boston" />
                   </div>
-                  <div className="col-span-1">
-                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
-                    <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
-                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
-                      placeholder="MA" />
-                  </div>
                   <div className="col-span-1 sm:col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">ZIP <span className="text-red-500">*</span></label>
                     <input required type="text" name="zipCode" value={formData.zipCode || ''} onChange={handleInputChange}
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="02110" />
+                  </div>
+                  <div className="col-span-1">
+                    <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
+                    <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
+                      className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
+                      placeholder="MA" />
                   </div>
                 </div>
 

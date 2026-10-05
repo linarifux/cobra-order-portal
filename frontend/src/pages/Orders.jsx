@@ -27,7 +27,7 @@ export default function Orders() {
   const canReleaseOrder = (['super_user', 'super_admin', 'admin'].includes(user?.role) && user?.releasePendingOrders === true) || user?.portal === 'admin' ;
 
   // Specific check to expose internal financials
-  const canViewCosts = user?.showCostsInCp === true || ['admin', 'super_admin'].includes(user?.role);
+  const canViewCosts = user?.showCostsInCp === true || ['admin', 'super_admin', 'super_user', 'account_manager', 'standard_user'].includes(user?.role);
 
   // Fetch fresh orders scoped to the current user OR full scope for privileged users
   useEffect(() => {

@@ -118,7 +118,7 @@ export default function OrderDetails() {
   const totalWeightOz = +(totalWeightInOunces % 16).toFixed(1);
 
   // Check if current user has the explicit flag to show costs OR is an admin/super_admin
-  const canViewCosts = currentUser?.showCostsInCp || ['admin', 'super_admin'].includes(currentUser?.role);
+  const canViewCosts = currentUser?.showCostsInCp || ['admin', 'super_admin', 'super_user', 'account_manager', 'standard_user'].includes(currentUser?.role);
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 px-4 lg:px-0 pb-12">

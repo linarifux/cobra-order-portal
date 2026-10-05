@@ -83,13 +83,17 @@ export default function Orders() {
     switch(status) {
       case 'Delivered':
       case 'Shipped':
+      case 'Billed':
         return 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50 shadow-sm';
+      case 'Picked':
+        return 'bg-indigo-50/80 text-indigo-700 border-indigo-200/50 shadow-sm';
       case 'Processing':
       case 'Ready to Ship':
         return 'bg-blue-50/80 text-blue-700 border-blue-200/50 shadow-sm';
       case 'Cancelled':
         return 'bg-red-50/80 text-red-700 border-red-200/50 shadow-sm';
       case 'On Hold':
+      case 'Hold':
         return 'bg-gray-50/80 text-gray-700 border-gray-200/50 shadow-sm';
       case 'Pending':
       default:
@@ -153,6 +157,8 @@ export default function Orders() {
       // Map Order Data to CSV Rows
       const csvRows = filteredOrders.map(o => {
         const itemQtyCount = o.items ? o.items.reduce((sum, i) => sum + (Number(i.quantity) || 0), 0) : 0;
+        const currentStatus = o.status || 'New';
+        const showFinancials = ['Shipped', 'Delivered', 'Billed'].includes(currentStatus);
         
         return [
           o.orderNumber || '',
@@ -172,10 +178,10 @@ export default function Orders() {
           o.shippingDetails?.serviceCode || '',
           o.shippingDetails?.trackingNumber || '',
           itemQtyCount,
-          (o.subtotal || 0).toFixed(2),
-          (o.shippingDetails?.shippingCost || 0).toFixed(2),
-          (o.processingFees?.totalProcessingFee || 0).toFixed(2),
-          (o.totalAmount || 0).toFixed(2)
+          showFinancials ? (o.subtotal || 0).toFixed(2) : '---',
+          showFinancials ? (o.shippingDetails?.shippingCost || 0).toFixed(2) : '---',
+          showFinancials ? (o.processingFees?.totalProcessingFee || 0).toFixed(2) : '---',
+          showFinancials ? (o.totalAmount || 0).toFixed(2) : '---'
         ];
       });
 
@@ -276,64 +282,69 @@ export default function Orders() {
       {/* MOBILE VIEW: Stacked Glassmorphic Cards */}
       <div className="md:hidden flex flex-col gap-4">
         {filteredOrders.length > 0 ? (
-          filteredOrders.map((order) => (
-            <div key={order._id} className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-white/60 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/60 transition-colors">
-              <div className="flex justify-between items-start mb-4">
-                <Link 
-                  to={`/orders/${order._id}`} 
-                  className="text-sm font-extrabold text-blue-600 hover:text-indigo-600 underline-offset-4 hover:underline tracking-tight"
-                >
-                  {order.orderNumber}
-                </Link>
-                <div className="flex flex-col items-end gap-2">
-                  <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
-                    {order.status}
-                  </span>
-                  {order.status === 'Pending' && canReleaseOrder && (
-                    <button
-                      onClick={(e) => { e.preventDefault(); handleReleaseOrder(order._id); }}
-                      disabled={isReleasing === order._id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />} Release
-                    </button>
-                  )}
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-4 border-b border-white/50 pb-4">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Date Created</p>
-                  <p className="text-sm font-medium text-gray-700">{formatDate(order.createdAt)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Value</p>
-                  <p className="text-sm font-extrabold text-gray-900">{formatMoney(order.totalAmount)}</p>
-                </div>
-              </div>
+          filteredOrders.map((order) => {
+            const currentStatus = order.status || 'New';
+            const showFinancials = ['Shipped', 'Delivered', 'Billed'].includes(currentStatus);
 
-              {canViewCosts && (
+            return (
+              <div key={order._id} className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl border border-white/60 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white/60 transition-colors">
+                <div className="flex justify-between items-start mb-4">
+                  <Link 
+                    to={`/orders/${order._id}`} 
+                    className="text-sm font-extrabold text-blue-600 hover:text-indigo-600 underline-offset-4 hover:underline tracking-tight"
+                  >
+                    {order.orderNumber}
+                  </Link>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(currentStatus)}`}>
+                      {currentStatus}
+                    </span>
+                    {currentStatus === 'Pending' && canReleaseOrder && (
+                      <button
+                        onClick={(e) => { e.preventDefault(); handleReleaseOrder(order._id); }}
+                        disabled={isReleasing === order._id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                      >
+                        {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />} Release
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
                 <div className="grid grid-cols-2 gap-4 mb-4 border-b border-white/50 pb-4">
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Shipping</p>
-                    <p className="text-sm font-medium text-gray-700">{formatMoney(order.shippingDetails?.shippingCost)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Date Created</p>
+                    <p className="text-sm font-medium text-gray-700">{formatDate(order.createdAt)}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Processing</p>
-                    <p className="text-sm font-medium text-gray-700">{formatMoney(order.processingFees?.totalProcessingFee)}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Total Value</p>
+                    <p className="text-sm font-extrabold text-gray-900">{showFinancials ? formatMoney(order.totalAmount) : '---'}</p>
                   </div>
                 </div>
-              )}
-              
-              <div className="flex justify-between items-end">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Recipient Destination</p>
-                  <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
-                  <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
+
+                {canViewCosts && (
+                  <div className="grid grid-cols-2 gap-4 mb-4 border-b border-white/50 pb-4">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Shipping</p>
+                      <p className="text-sm font-medium text-gray-700">{showFinancials ? formatMoney(order.shippingDetails?.shippingCost) : '---'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Processing</p>
+                      <p className="text-sm font-medium text-gray-700">{showFinancials ? formatMoney(order.processingFees?.totalProcessingFee) : '---'}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex justify-between items-end">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Recipient Destination</p>
+                    <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
+                    <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="flex flex-col items-center justify-center p-8 py-12 bg-white/40 backdrop-blur-2xl border border-white/60 rounded-3xl text-center shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
             <div className="h-14 w-14 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
@@ -363,61 +374,66 @@ export default function Orders() {
             </thead>
             <tbody className="divide-y divide-white/40">
               {filteredOrders.length > 0 ? (
-                filteredOrders.map((order) => (
-                  <tr key={order._id} className="hover:bg-white/60 transition-colors duration-200 group">
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
-                      <Link 
-                        to={`/orders/${order._id}`} 
-                        className="text-sm font-bold text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline"
-                      >
-                        {order.orderNumber}
-                      </Link>
-                    </td>
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-500">
-                      {formatDate(order.createdAt)}
-                    </td>
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
-                      <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
-                      <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
-                    </td>
-                    {canViewCosts && (
-                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
-                        {formatMoney(order.shippingDetails?.shippingCost)}
-                      </td>
-                    )}
-                    {canViewCosts && (
-                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
-                        {formatMoney(order.processingFees?.totalProcessingFee)}
-                      </td>
-                    )}
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
-                      {formatMoney(order.totalAmount)}
-                    </td>
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm">
-                      <span className={`inline-flex items-center rounded-lg px-3 py-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider border ${getStatusBadge(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-right">
-                      {order.status === 'Pending' && canReleaseOrder && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleReleaseOrder(order._id);
-                          }}
-                          disabled={isReleasing === order._id}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                filteredOrders.map((order) => {
+                  const currentStatus = order.status || 'New';
+                  const showFinancials = ['Shipped', 'Delivered', 'Billed'].includes(currentStatus);
+
+                  return (
+                    <tr key={order._id} className="hover:bg-white/60 transition-colors duration-200 group">
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
+                        <Link 
+                          to={`/orders/${order._id}`} 
+                          className="text-sm font-bold text-blue-600 hover:text-indigo-600 transition-colors underline-offset-4 hover:underline"
                         >
-                          {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
-                          Release
-                        </button>
+                          {order.orderNumber}
+                        </Link>
+                      </td>
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-500">
+                        {formatDate(order.createdAt)}
+                      </td>
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5">
+                        <div className="text-sm font-bold text-gray-900">{order.shippingAddress?.recipientName || 'N/A'}</div>
+                        <div className="text-xs font-medium text-gray-500 mt-0.5">{order.shippingAddress?.city}, {order.shippingAddress?.state}</div>
+                      </td>
+                      {canViewCosts && (
+                        <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
+                          {showFinancials ? formatMoney(order.shippingDetails?.shippingCost) : '---'}
+                        </td>
                       )}
-                    </td>
-                  </tr>
-                ))
+                      {canViewCosts && (
+                        <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-medium text-gray-700">
+                          {showFinancials ? formatMoney(order.processingFees?.totalProcessingFee) : '---'}
+                        </td>
+                      )}
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
+                        {showFinancials ? formatMoney(order.totalAmount) : '---'}
+                      </td>
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm">
+                        <span className={`inline-flex items-center rounded-lg px-3 py-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider border ${getStatusBadge(currentStatus)}`}>
+                          {currentStatus}
+                        </span>
+                      </td>
+                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-right">
+                        {currentStatus === 'Pending' && canReleaseOrder && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleReleaseOrder(order._id);
+                            }}
+                            disabled={isReleasing === order._id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white hover:bg-slate-800 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 disabled:opacity-50"
+                          >
+                            {isReleasing === order._id ? <Loader2 size={12} className="animate-spin" /> : <Unlock size={12} />}
+                            Release
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={canViewCosts ? 8 : 6} className="px-6 lg:px-8 py-16 lg:py-20 text-center">
+                  <td colSpan={canViewCosts ? 8 : 5} className="px-6 lg:px-8 py-16 lg:py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <div className="h-16 w-16 bg-white/50 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-white/60">
                         <ClipboardList className="h-8 w-8 text-gray-400" />
@@ -435,4 +451,3 @@ export default function Orders() {
     </div>
   );
 }
-

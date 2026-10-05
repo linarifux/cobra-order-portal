@@ -51,7 +51,9 @@ export default function OrderDetails() {
   const getStatusBadge = (status) => {
     switch(status?.toLowerCase()) {
       case 'delivered':
-      case 'shipped': return 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50 shadow-sm';
+      case 'shipped':
+      case 'billed': return 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50 shadow-sm';
+      case 'picked': return 'bg-indigo-50/80 text-indigo-700 border-indigo-200/50 shadow-sm';
       case 'processing':
       case 'ready to ship': return 'bg-blue-50/80 text-blue-700 border-blue-200/50 shadow-sm';
       case 'cancelled': return 'bg-red-50/80 text-red-700 border-red-200/50 shadow-sm';
@@ -102,6 +104,8 @@ export default function OrderDetails() {
   const addr = order.shippingAddress;
   const ship = order.shippingDetails;
   const currentStep = getProgressStep(order.status);
+  const currentStatus = order.status || 'New';
+  const showFinancials = ['Shipped', 'Delivered', 'Billed'].includes(currentStatus);
 
   // --- Safely calculate total order weight ---
   // Falls back to manually summing the items if the API didn't provide `totalWeightOunces` on the root order
@@ -387,7 +391,7 @@ export default function OrderDetails() {
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span className="font-bold text-gray-900">
-                  {formatMoney((order.subtotal))}
+                  {showFinancials ? formatMoney((order.subtotal)) : '---'}
                 </span>
               </div>
               
@@ -406,7 +410,7 @@ export default function OrderDetails() {
                 <div className="flex justify-between items-center text-gray-600 font-medium">
                   <span>Processing Fees</span>
                   <span className="font-bold text-gray-900">
-                    {formatMoney(order?.processingFees?.totalProcessingFee || 0)}
+                    {showFinancials ? formatMoney(order?.processingFees?.totalProcessingFee || 0) : '---'}
                   </span>
                 </div>
               )}
@@ -414,15 +418,14 @@ export default function OrderDetails() {
               <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Shipping Cost</span>
                 <span className="font-bold text-gray-900">
-                  {formatMoney(ship?.shippingCost || 0)}
+                  {showFinancials ? formatMoney(ship?.shippingCost || 0) : '---'}
                 </span>
               </div>
               
               <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
                 <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
                 <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
-                  {formatMoney(order.totalAmount)}
-                  {console.log(order)}
+                  {showFinancials ? formatMoney(order.totalAmount) : '---'}
                 </span>
               </div>
             </div>

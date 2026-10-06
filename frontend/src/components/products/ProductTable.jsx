@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Minus, Search, Package, RefreshCw, AlertTriangle } from 'lucide-react'; 
-import {AnimatePresence, motion } from 'framer-motion';
+import { Plus, Search, Package, RefreshCw, AlertTriangle } from 'lucide-react'; 
+import { AnimatePresence, motion } from 'framer-motion';
+
+const WarningText = ({ message }) => (
+  <p className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1 mt-0.5">
+    <AlertTriangle size={12} /> {message}
+  </p>
+);
 
 // Bulletproof internal component to handle images without getting stuck invisible
 const ProductThumbnail = ({ src, alt, sizeClass = "h-16 w-16" }) => {
@@ -39,6 +45,38 @@ export default function ProductTable({
   isLoading = false, 
   onRefresh 
 }) {
+  
+  // Local state to track which product ID is currently triggering an availability warning
+  const [availabilityWarning, setAvailabilityWarning] = useState(null);
+
+  // --- Wrapper for handleAdd to enforce Strict Inventory Checking inline ---
+  const handleStrictAdd = (product) => {
+    const qty = parseInt(quantities[product.id] || 0, 10);
+    const availableStock = Number(product.available) || 0;
+
+    if (qty > availableStock) {
+      setAvailabilityWarning({
+        id: product.id,
+        message: `Cannot add ${qty} units. Only ${availableStock} in stock.`
+      });
+      return;
+    }
+    
+    // Clear warning if successful
+    if (availabilityWarning?.id === product.id) {
+      setAvailabilityWarning(null);
+    }
+    
+    handleAdd(product);
+  };
+
+  // Wrap the parent handleQuantityChange to clear warnings when the user types a new number
+  const handleQuantityInput = (id, value) => {
+    if (availabilityWarning?.id === id) {
+      setAvailabilityWarning(null);
+    }
+    handleQuantityChange(id, value);
+  };
 
   // --- Premium Loading Skeletons ---
   if (isLoading) {
@@ -115,20 +153,19 @@ export default function ProductTable({
                 .filter(Boolean)
                 .join(' > ') || product.displayCategory || 'General';
 
-              // Bulletproof numerics
               const price = Number(product.price || product.cost || 0);
               const available = Number(product.available || 0);
               const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
               
-              // Limit warning checks
               const currentQty = Number(quantities[product.id]) || 0;
               const maxLimit = Number(product.max) || 0;
               const minLimit = Number(product.min) || 0;
               
               const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
-              // Only trigger minimum warning if they actually typed a number > 0
               const isBelowMin = minLimit > 0 && currentQty > 0 && currentQty < minLimit;
-              const hasWarning = isExceedingMax || isBelowMin;
+              
+              const hasRuleWarning = isExceedingMax || isBelowMin;
+              const hasAvailabilityWarning = availabilityWarning?.id === product.id;
 
               return (
                 <div key={product.id || product._id} className="bg-white/40 border border-white/60 rounded-3xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col gap-4">
@@ -172,19 +209,19 @@ export default function ProductTable({
 
                   {/* Action Pill (Full Width) & Warning */}
                   <div className="flex flex-col gap-1.5 w-full">
-                    <div className={`flex items-center bg-white border ${hasWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden h-12 w-full transition-all`}>
+                    <div className={`flex items-center bg-white border ${hasRuleWarning || hasAvailabilityWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden h-12 w-full transition-all`}>
                       <input
                         type="text"
                         inputMode="numeric"
                         maxLength="4"
                         placeholder="Qty"
                         value={quantities[product.id] || ''}
-                        onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                        onChange={(e) => handleQuantityInput(product.id, e.target.value)}
                         className="w-20 h-full px-2 text-center text-sm font-black text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 placeholder:font-semibold"
                       />
                       <div className="h-6 w-px bg-slate-200 shrink-0"></div>
                       <button 
-                        onClick={() => handleAdd(product)}
+                        onClick={() => handleStrictAdd(product)}
                         disabled={!quantities[product.id] || quantities[product.id] === '0'}
                         className="flex-1 flex items-center justify-center gap-2 h-full bg-slate-50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors font-bold text-sm uppercase tracking-widest"
                       >
@@ -194,18 +231,22 @@ export default function ProductTable({
                     
                     {/* Limit Warnings */}
                     <AnimatePresence>
-                      {hasWarning && (
-                        <motion.p 
+                      {(hasRuleWarning || hasAvailabilityWarning) && (
+                        <motion.div 
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="text-[10px] font-bold text-amber-600 flex items-center justify-center gap-1 mt-0.5"
+                          className="flex justify-center"
                         >
-                          <AlertTriangle size={12} /> 
-                          {isExceedingMax 
-                            ? `Limit exceeded (${maxLimit}). Requires approval.` 
-                            : `Below minimum (${minLimit}). Requires approval.`}
-                        </motion.p>
+                          {hasAvailabilityWarning ? (
+                             <WarningText message={availabilityWarning.message} />
+                          ) : (
+                             <WarningText message={isExceedingMax 
+                              ? `Limit exceeded (${maxLimit}). Requires approval.` 
+                              : `Below minimum (${minLimit}). Requires approval.`} 
+                             />
+                          )}
+                        </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
@@ -230,20 +271,20 @@ export default function ProductTable({
                 const categoryTree = [product.cat1, product.cat2, product.cat3]
                   .filter(Boolean)
                   .join(' > ') || product.displayCategory || 'General';
-                // Bulletproof numerics
+
                 const price = Number(product.price || product.cost || 0);
                 const available = Number(product.available || 0);
                 const onOrder = Number(product.onOrder || product.pipelineSupply || 0);
                 
-                // Limit warning checks
                 const currentQty = Number(quantities[product.id]) || 0;
                 const maxLimit = Number(product.max) || 0;
                 const minLimit = Number(product.min) || 0;
                 
                 const isExceedingMax = maxLimit > 0 && currentQty > maxLimit;
-                // Only trigger minimum warning if they actually typed a number > 0
                 const isBelowMin = minLimit > 0 && currentQty > 0 && currentQty < minLimit;
-                const hasWarning = isExceedingMax || isBelowMin;
+                
+                const hasRuleWarning = isExceedingMax || isBelowMin;
+                const hasAvailabilityWarning = availabilityWarning?.id === product.id;
 
                 return (
                   <tr key={product.id || product._id} className="hover:bg-white/60 transition-colors duration-200 group">
@@ -302,18 +343,18 @@ export default function ProductTable({
                     {/* Column 4: Action Pill & Warning */}
                     <td className="px-6 py-4 align-top pt-5">
                       <div className="flex flex-col items-end gap-1.5">
-                        <div className={`flex items-center bg-white border ${hasWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden transition-all w-max`}>
+                        <div className={`flex items-center bg-white border ${hasRuleWarning || hasAvailabilityWarning ? 'border-amber-400/80 ring-2 ring-amber-500/20' : 'border-slate-200/80 focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:border-blue-400'} rounded-xl shadow-sm overflow-hidden transition-all w-max`}>
                           <input
                             type="text"
                             maxLength="4"
                             placeholder="Qty"
                             value={quantities[product.id] || ''}
-                            onChange={(e) => handleQuantityChange(product.id, e.target.value)}
+                            onChange={(e) => handleQuantityInput(product.id, e.target.value)}
                             className="w-14 h-10 px-2 text-center text-sm font-black text-slate-900 bg-transparent border-none outline-none placeholder:text-slate-300 placeholder:font-semibold"
                           />
                           <div className="h-6 w-px bg-slate-200"></div>
                           <button 
-                            onClick={() => handleAdd(product)}
+                            onClick={() => handleStrictAdd(product)}
                             disabled={!quantities[product.id] || quantities[product.id] === '0'}
                             className="flex items-center justify-center h-10 w-12 bg-slate-50 text-blue-600 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors"
                             title="Add to Cart"
@@ -324,18 +365,22 @@ export default function ProductTable({
 
                         {/* Limit Warnings */}
                         <AnimatePresence>
-                          {hasWarning && (
-                            <motion.p 
+                          {(hasRuleWarning || hasAvailabilityWarning) && (
+                            <motion.div 
                               initial={{ opacity: 0, y: -5 }}
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, y: -5 }}
-                              className="text-[9px] font-bold text-amber-600 flex items-center justify-end gap-1 pr-1"
+                              className="flex justify-end w-full"
                             >
-                              <AlertTriangle size={10} /> 
-                              {isExceedingMax 
-                                ? `Limit exceeded (${maxLimit}). Requires approval.` 
-                                : `Below minimum (${minLimit}). Requires approval.`}
-                            </motion.p>
+                              {hasAvailabilityWarning ? (
+                                <WarningText message={availabilityWarning.message} />
+                              ) : (
+                                <WarningText message={isExceedingMax 
+                                  ? `Limit exceeded (${maxLimit}). Requires approval.` 
+                                  : `Below min (${minLimit}). Requires approval.`} 
+                                />
+                              )}
+                            </motion.div>
                           )}
                         </AnimatePresence>
                       </div>

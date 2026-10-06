@@ -110,7 +110,7 @@ export default function Products() {
         weight: item.weight || 0,
         min: item.safetyBuffer || item.min || 0,
         max: item.max || '-', 
-        available: item.available || 0,
+        available: Number(item.available) || 0, // Ensure absolute number formatting
         onOrder: item.pipelineSupply || item.openOrders || item.onOrder || 0,
         cat1: item.category1?.categoryName || (typeof item.category1 === 'string' ? item.category1 : 'General'),
         cat2: item.category2?.categoryName || (typeof item.category2 === 'string' ? item.category2 : null),
@@ -169,14 +169,21 @@ export default function Products() {
     // Evaluate limits safely parsing Number (treating invalid/hyphens as 0)
     const maxLimit = Number(product.max) || 0;
     const minLimit = Number(product.min) || 0;
+    const availableStock = Number(product.available) || 0;
     
     const exceedsMax = maxLimit > 0 && qty > maxLimit;
     const belowMin = minLimit > 0 && qty < minLimit;
     
     const qtyLimitExceeds = exceedsMax || belowMin;
-
+    
     if (qty > 0) {
-      // Dispatch the flag into the cart payload
+      // STRICT OVERRIDE: Block addition if requested qty is greater than available stock
+      if (qty > availableStock) {
+        toast.warning("You cannot order more than the inventory.available");
+        return; // Halt execution immediately
+      }
+
+      // Dispatch the item into the cart
       dispatch(addToCart({ product, quantity: qty, qtyLimitExceeds }));
       setQuantities(prev => ({ ...prev, [product.id]: '' }));
       toast.success(`Added ${qty} unit${qty > 1 ? 's' : ''} to order queue`);
@@ -243,7 +250,7 @@ export default function Products() {
           products={filteredProducts}
           quantities={quantities}
           handleQuantityChange={handleQuantityChange}
-          handleAdd={handleAdd}
+          handleAdd={handleAdd} // The fixed handleAdd function is passed down here
           isLoading={status === 'loading'}
           onRefresh={() => divisionId && dispatch(fetchInventory(divisionId))}
         />
@@ -252,4 +259,3 @@ export default function Products() {
     </div>
   );
 }
-

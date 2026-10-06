@@ -349,6 +349,7 @@ export default function Address() {
                     <span className="text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs block mt-1">{addr.country}</span>
                   </span>
                 </div>
+
                 {addr.phone && (
                   <div className="flex items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-medium text-gray-600">
                     <Phone className="h-4 w-4 text-blue-500/70 flex-shrink-0" />
@@ -469,7 +470,7 @@ export default function Address() {
                   </div>
                   <div className="col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-slate-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
-                    <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange}
+                    <input required type="text" name="state" value={formData.state || ''} onChange={handleInputChange} disabled
                       className="w-full h-11 sm:h-12 px-3 sm:px-4 rounded-xl border border-white bg-white/80 text-sm font-medium text-slate-900 outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-inner" 
                       placeholder="MA" />
                   </div>

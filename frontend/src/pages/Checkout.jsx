@@ -529,7 +529,7 @@ export default function Checkout() {
                   </div>
                   <div className="col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">State <span className="text-red-500">*</span></label>
-                    <input type="text" name="state" value={addressForm.state} onChange={handleInputChange} className={premiumInputClass} />
+                    <input type="text" name="state" value={addressForm.state} onChange={handleInputChange} className={premiumInputClass} disabled/>
                   </div>
                 </div>
 

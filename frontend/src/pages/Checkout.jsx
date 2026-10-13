@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { clearCart } from '../store/slices/cartSlice';
 import { fetchAddressesByUser, createAddress } from '../store/slices/addressSlice';
 import { fetchCarriers } from '../store/slices/carrierSlice';
+import { fetchConfiguredFreightProviders } from '../store/slices/freightProviderSlice';
 import api from '../utils/api';
 import zipState from 'zip-state';
 import {
@@ -65,8 +66,11 @@ export default function Checkout() {
   // Redux State
   const cartItems = useSelector(state => state.cart.items);
 
-  const { items: addresses, status: addressStatus } = useSelector(state => state.addresses);
-  const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers);
+  const { items: addresses, status: addressStatus } = useSelector(state => state.addresses || {});
+  const { items: carriers, status: carrierStatus } = useSelector(state => state.carriers || {});
+  
+  // Freight Providers State
+  const { items: freightProviders, status: freightStatus } = useSelector(state => state.freightProviders || {});
 
   // Checkout Form State
   const [selectedAddressId, setSelectedAddressId] = useState('');
@@ -118,7 +122,7 @@ export default function Checkout() {
       _id: 'primary-user-address',
       firstName,
       lastName,
-      companyName: user.companyName || '', // Mapped strictly to Address Schema property names
+      companyName: user.companyName || '', 
       phone: user.phone || '', 
       email: user.email || '', 
       street1: user.userAddress.street1 || '',
@@ -147,18 +151,28 @@ export default function Checkout() {
     return combined;
   }, [addresses, primaryAddress, user?._id]);
 
-  // 2. Fetch Carrier Configurations dynamically scoped by the active Division
+  // 2. FORCE Fetch Carrier Configurations explicitly for the active division to avoid stale state data
   useEffect(() => {
-    if (carrierStatus === 'idle' && parsedDivisionId) {
+    if (parsedDivisionId) {
+      // By omitting the 'idle' check, we guarantee fresh data for the exact division the checkout is in
       dispatch(fetchCarriers(parsedDivisionId));
+      dispatch(fetchConfiguredFreightProviders(parsedDivisionId));
     }
-  }, [carrierStatus, dispatch, parsedDivisionId]);
+  }, [dispatch, parsedDivisionId]);
 
-  // 3. Process Carriers matching the nested configuration model array response
+  // 3. Process Standard Carriers & Freight Providers mapping
   useEffect(() => {
-    if (carrierStatus === 'succeeded' && carriers) {
+    // Aggressively wipe stale state out while loading the fresh database records
+    if (carrierStatus === 'loading' || freightStatus === 'loading') {
+      setShippingOptions([]);
+      setSelectedShippingMethod('');
+      return;
+    }
+
+    if (carrierStatus === 'succeeded' || freightStatus === 'succeeded') {
       const flattenedOptions = [];
 
+      // Combine standard parcel carriers
       if (Array.isArray(carriers)) {
         carriers.forEach(carrier => {
           if (carrier.isActive && carrier.enabledServices) {
@@ -166,7 +180,7 @@ export default function Checkout() {
               if (service.isActive) {
                 flattenedOptions.push({
                   code: service.serviceCode,
-                  label: `${carrier.carrierType} - ${service.serviceName}`,
+                  label: `${carrier.carrierType?.toUpperCase()} - ${service.serviceName}`,
                   carrierId: carrier._id,
                   carrierType: carrier.carrierType
                 });
@@ -176,13 +190,28 @@ export default function Checkout() {
         });
       }
 
+      // Combine LTL Freight providers
+      if (Array.isArray(freightProviders)) {
+        freightProviders.forEach(fp => {
+          if (fp.isActive !== false) {
+            flattenedOptions.push({
+              // Unique code mapped directly to provider code to prevent generic selection collision
+              code: fp.providerCode,
+              label: `LTL FREIGHT: ${fp.accountName} (${fp.providerCode})`,
+              carrierId: fp._id,
+              carrierType: fp.providerCode
+            });
+          }
+        });
+      }
+
       setShippingOptions(flattenedOptions);
 
-      if (flattenedOptions.length > 0) {
+      if (flattenedOptions.length > 0 && !selectedShippingMethod) {
         setSelectedShippingMethod(flattenedOptions[0].code);
       }
     }
-  }, [carriers, carrierStatus]);
+  }, [carriers, freightProviders, carrierStatus, freightStatus]);
 
   const handleAddressSelect = (e) => {
     const id = e.target.value;
@@ -194,7 +223,6 @@ export default function Checkout() {
         let dbCountry = addr.country || 'US';
         if (dbCountry === 'United States' || dbCountry === 'USA') dbCountry = 'US';
 
-        // Properly map Address Book Schema property names to Checkout Form state keys
         setAddressForm({
           firstName: addr.firstName || '',
           lastName: addr.lastName || '',
@@ -225,7 +253,6 @@ export default function Checkout() {
     setAddressForm(prev => {
       const nextState = { ...prev, [name]: value };
       
-      // Auto-fill state if the zipCode is entered and valid
       if (name === 'zipCode' && typeof value === 'string') {
         const cleanZip = value.trim().slice(0, 5);
         if (cleanZip.length === 5) {
@@ -283,7 +310,6 @@ export default function Checkout() {
     let finalAddressId = selectedAddressId;
 
     try {
-      // 1. Create/Save Address if selected - Properly reverse-map keys back to Address schema
       if (!finalAddressId && saveToAddressBook) {
         const payload = {
           firstName: addressForm.firstName,
@@ -320,7 +346,6 @@ export default function Checkout() {
 
       const finalNotes = poNumber ? `PO Number: ${poNumber}\n${orderNotes}` : orderNotes;
 
-      // 2. Submit the Order payload via the centralized Axios api
       const orderPayload = {
         orderNumber,
         customer: user.customer,
@@ -331,7 +356,7 @@ export default function Checkout() {
         items: formattedItems,
         totalAmount: total,
         totalWeightOunces: totalWeightInOunces,
-        qtyLimitExceeds: cartItems.some(item => item.qtyLimitExceeds), // Evaluates if any item in cart exceeds its threshold
+        qtyLimitExceeds: cartItems.some(item => item.qtyLimitExceeds), 
         shippingAddress: {
           recipientName: `${addressForm.firstName} ${addressForm.lastName}`.trim(),
           companyName: addressForm.company, 
@@ -355,14 +380,12 @@ export default function Checkout() {
 
       await api.post('/orders', orderPayload);
 
-      // 3. Clear and Redirect
       dispatch(clearCart());
       setIsSubmitting(false);
       navigate('/orders');
 
     } catch (err) {
       console.error('Failed to submit order:', err);
-      // Safely extract Axios error message if it exists
       const errorMessage = err.response?.data?.message || err.message || 'There was a critical error submitting your order. Please try again.';
       setFormError(errorMessage);
       setIsSubmitting(false);
@@ -521,7 +544,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* ZIP and State Fields swapped */}
                 <div className="grid grid-cols-2 gap-4 sm:gap-5">
                   <div className="col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
@@ -533,7 +555,6 @@ export default function Checkout() {
                   </div>
                 </div>
 
-                {/* Country Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
@@ -665,7 +686,12 @@ export default function Checkout() {
                     Select Service <span className="text-red-500">*</span>
                   </label>
 
-                  {shippingOptions.length > 0 ? (
+                  {carrierStatus === 'loading' || freightStatus === 'loading' ? (
+                    <div className="flex items-center gap-3 p-4 bg-white/50 border border-slate-200 rounded-xl shadow-inner">
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                      <span className="text-xs font-bold text-gray-600">Retrieving live shipping methods...</span>
+                    </div>
+                  ) : shippingOptions.length > 0 ? (
                     <div className="relative">
                       <select
                         value={selectedShippingMethod}
@@ -684,7 +710,8 @@ export default function Checkout() {
                       </div>
                     </div>
                   ) : (
-                    <div className="text-xs font-medium text-gray-500 bg-white/50 p-4 rounded-xl border border-dashed border-gray-300 flex items-center">
+                    <div className="text-xs font-medium text-gray-500 bg-white/50 p-4 rounded-xl border border-dashed border-gray-300 flex items-center shadow-inner">
+                      <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
                       No shipping options available. Please check carrier configuration.
                     </div>
                   )}
@@ -760,7 +787,7 @@ export default function Checkout() {
               <button
                 type="button"
                 onClick={handlePlaceOrder}
-                disabled={isSubmitting || carrierStatus === 'loading' || shippingOptions.length === 0}
+                disabled={isSubmitting || carrierStatus === 'loading' || freightStatus === 'loading' || shippingOptions.length === 0}
                 className="w-full flex items-center justify-center gap-2 h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm sm:text-base font-bold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 hover:from-blue-700 hover:to-indigo-700 focus:ring-4 focus:ring-blue-500/20 disabled:opacity-70 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (

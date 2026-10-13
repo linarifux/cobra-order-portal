@@ -8,6 +8,7 @@ import divisionReducer from './slices/divisionSlice';
 import checkoutReducer from './slices/checkoutSlice';
 import cartReducer from './slices/cartSlice'; 
 import customerReducer from './slices/customerSlice'
+import freightProviderReducer from './slices/freightProviderSlice'; // Import the freight provider reducer
 
 export const store = configureStore({
   reducer: {
@@ -16,9 +17,11 @@ export const store = configureStore({
     inventory: inventoryReducer,
     addresses: addressReducer,
     carriers: carrierReducer,
-    divisions: divisionReducer, 
+    divisions: divisionReducer,
+    freightProviders: freightProviderReducer,
     checkout: checkoutReducer,
     cart: cartReducer, 
     customers: customerReducer
   },
 });
+

@@ -7,8 +7,11 @@ import carrierReducer from './slices/carrierSlice';
 import divisionReducer from './slices/divisionSlice'; 
 import checkoutReducer from './slices/checkoutSlice';
 import cartReducer from './slices/cartSlice'; 
-import customerReducer from './slices/customerSlice'
-import freightProviderReducer from './slices/freightProviderSlice'; // Import the freight provider reducer
+import customerReducer from './slices/customerSlice';
+import freightProviderReducer from './slices/freightProviderSlice'; 
+
+// NEW: Import the injection function from your API file
+import { injectStore } from '../utils/api';
 
 export const store = configureStore({
   reducer: {
@@ -25,3 +28,6 @@ export const store = configureStore({
   },
 });
 
+// NEW: Pass the fully initialized store to your Axios instance
+// This completely avoids the Circular Dependency crash
+injectStore(store);

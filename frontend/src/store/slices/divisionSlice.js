@@ -1,5 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../../utils/api'; // Utilizing your authorized Axios instance
+// NEW: Import the logout action to kill the zombie session
+import { logoutUser } from './authSlice';
 
 // Safely pull initial hydration details from persistent storage layers
 const getStoredActiveDivision = () => {
@@ -26,11 +28,17 @@ const getStoredActiveDivision = () => {
 // Fetches the active workspace options allocated to the user's business profile
 export const fetchDivisions = createAsyncThunk(
   'divisions/fetchAll',
-  async (_, { rejectWithValue }) => {
+  // NEW: Destructure dispatch from thunkAPI
+  async (_, { rejectWithValue, dispatch }) => {
     try {
       const response = await api.get('/divisions');
       return response.data?.data?.divisions || response.data?.data || [];
     } catch (error) {
+      // NEW: Catch 401 Unauthorized from Axios and force logout
+      if (error.response && error.response.status === 401) {
+        dispatch(logoutUser());
+        return rejectWithValue('Session expired. Please log in again.');
+      }
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to fetch divisions'
       );
@@ -38,14 +46,20 @@ export const fetchDivisions = createAsyncThunk(
   }
 );
 
-// NEW: Fetches a single specific division by its ID
+// Fetches a single specific division by its ID
 export const fetchDivisionById = createAsyncThunk(
   'divisions/fetchById',
-  async (id, { rejectWithValue }) => {
+  // NEW: Destructure dispatch from thunkAPI
+  async (id, { rejectWithValue, dispatch }) => {
     try {
       const response = await api.get(`/divisions/${id}`);
       return response.data?.data?.division || response.data?.data;
     } catch (error) {
+      // NEW: Catch 401 Unauthorized from Axios and force logout
+      if (error.response && error.response.status === 401) {
+        dispatch(logoutUser());
+        return rejectWithValue('Session expired. Please log in again.');
+      }
       return rejectWithValue(
         error.response?.data?.message || error.message || 'Failed to fetch division details'
       );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion'; 
 import { Box, Home, Package, ClipboardList, MapPin, Menu, X, ShoppingCart, Building2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Box, Home, Package, ClipboardList, MapPin, Menu, X, ShoppingCart, Build
 import { setActiveDivision, fetchDivisions, fetchDivisionById } from '../../store/slices/divisionSlice';
 import { fetchCartDb } from '../../store/slices/cartSlice'; 
 import { fetchCustomerById } from '../../store/slices/customerSlice'; 
+import { logoutUser } from '../../store/slices/authSlice';
 
 import CartDrawer from '../navbar/CartDrawer';
 import MobileMenu from '../navbar/MobileMenu';
@@ -20,7 +21,44 @@ export default function Navbar() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   
   const location = useLocation();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  // --- STRICT FRONTEND SECURITY HOOK ---
+  // Runs on mount and every route change to guarantee token integrity
+  useEffect(() => {
+    const validateSession = () => {
+      const token = localStorage.getItem('token');
+
+      const forceLogout = () => {
+        dispatch(logoutUser());
+        navigate('/login', { replace: true });
+      };
+
+      // 1. Missing Token Check
+      if (!token) return forceLogout();
+
+      // 2. Malformed Token Check (JWTs must have 3 parts separated by dots)
+      const parts = token.split('.');
+      if (parts.length !== 3) return forceLogout();
+
+      // 3. Local Expiration Check (Catches expired tokens before hitting the backend)
+      try {
+        const payload = JSON.parse(atob(parts[1]));
+        // payload.exp is in seconds, Date.now() is in milliseconds
+        if (payload.exp && payload.exp * 1000 < Date.now()) {
+          return forceLogout();
+        }
+      } catch (error) {
+        // If the token payload cannot be decoded, it is corrupted/tampered with
+        return forceLogout();
+      }
+    };
+
+    if (location.pathname !== '/login') {
+      validateSession();
+    }
+  }, [location.pathname, dispatch, navigate]);
 
   const cartItems = useSelector(state => state.cart?.items) || [];
   const cartCount = cartItems.reduce((total, item) => total + (item?.quantity || 0), 0);
@@ -206,6 +244,7 @@ export default function Navbar() {
                 )}
               </AnimatePresence>
             </button>
+            
 
             <div className="hidden sm:block h-8 sm:h-10 w-px bg-slate-200/80 rounded-full mx-1 sm:mx-2"></div>
 

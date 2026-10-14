@@ -1,27 +1,28 @@
 import axios from 'axios';
+import { logoutUser } from '../store/slices/authSlice';
 
-// Ensure this matches your backend server's URL and port
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+
+// NEW: Create a variable to hold the injected Redux store
+let store;
+export const injectStore = (_store) => {
+  store = _store;
+};
 
 const api = axios.create({
   baseURL: API_URL,
-  // CRITICAL: This allows Axios to send and receive HTTP-only cookies securely
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Request Interceptor: Attach the token if it exists in local storage
 api.interceptors.request.use(
   (config) => {
-    // If you are storing the token locally (e.g., from the login response), grab it here
     const token = localStorage.getItem('token'); 
-    
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
-    
     return config;
   },
   (error) => {
@@ -29,18 +30,23 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Handle global errors (like expired tokens)
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // If the backend returns a 401 Unauthorized, the session has expired or the token is invalid
     if (error.response && error.response.status === 401) {
-      // Clear the local token and force the user back to the login screen
-      localStorage.removeItem('token');
-      // window.location.href = '/login'; // Uncomment this to enforce strict logouts
+      
+      // NEW: Safely use the injected store to trigger the logout
+      if (store) {
+        store.dispatch(logoutUser());
+      }
+      
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
+    
     return Promise.reject(error);
   }
 );

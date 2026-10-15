@@ -27,7 +27,7 @@ export default function Orders() {
   const canReleaseOrder = (['super_user', 'super_admin', 'admin'].includes(user?.role) && user?.releasePendingOrders === true) || user?.portal === 'admin' ;
 
   // Specific check to expose internal financials
-  const canViewCosts = user?.showCostsInCp === true || ['admin', 'super_admin', 'super_user', 'account_manager', 'standard_user'].includes(user?.role);
+  const canViewCosts = user?.showCostsInCp === true;
 
   // Fetch fresh orders scoped to the current user OR full scope for privileged users
   useEffect(() => {
@@ -367,9 +367,9 @@ export default function Orders() {
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Recipient</th>
                 {canViewCosts && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Shipping</th>}
                 {canViewCosts && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Processing</th>}
-                <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Total</th>
+                {canViewCosts && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Total</th>}
                 <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-left text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Status</th>
-                <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Actions</th>
+                {canReleaseOrder && <th scope="col" className="px-6 lg:px-8 py-4 lg:py-5 text-right text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-white/50">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-white/40">
@@ -405,9 +405,11 @@ export default function Orders() {
                           {showFinancials ? formatMoney(order.processingFees?.totalProcessingFee) : '---'}
                         </td>
                       )}
-                      <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
-                        {showFinancials ? formatMoney(order.totalAmount) : '---'}
-                      </td>
+                      {canViewCosts && (
+                        <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm font-extrabold text-gray-900">
+                          {showFinancials ? formatMoney(order.totalAmount) : '---'}
+                        </td>
+                      )}
                       <td className="whitespace-nowrap px-6 lg:px-8 py-4 lg:py-5 text-sm">
                         <span className={`inline-flex items-center rounded-lg px-3 py-1.5 text-[10px] lg:text-[11px] font-bold uppercase tracking-wider border ${getStatusBadge(currentStatus)}`}>
                           {currentStatus}

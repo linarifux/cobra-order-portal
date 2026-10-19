@@ -2,8 +2,8 @@ import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchOrderById, clearCurrentOrder } from '../store/slices/orderSlice';
-import { 
-  ArrowLeft, Package, MapPin, Truck, FileText, 
+import {
+  ArrowLeft, Package, MapPin, Truck, FileText,
   Loader2, AlertCircle, Calendar, CreditCard, ExternalLink,
   CheckCircle2, Mail, Phone, Clock, Weight, Briefcase
 } from 'lucide-react';
@@ -19,7 +19,7 @@ const getTrackingUrl = (carrier, trackingNumber) => {
   if (c.includes('usps') || c.includes('postal')) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${encodedTracking}`;
   if (c.includes('dhl')) return `https://www.dhl.com/global-en/home/tracking/tracking-express.html?submit=1&tracking-id=${encodedTracking}`;
   if (c.includes('canada post')) return `https://www.canadapost-postescanada.ca/track-reperage/en#/search?searchFor=${encodedTracking}`;
-  
+
 };
 
 export default function OrderDetails() {
@@ -32,7 +32,7 @@ export default function OrderDetails() {
 
   useEffect(() => {
     dispatch(fetchOrderById(id));
-    
+
     // Cleanup on unmount
     return () => { dispatch(clearCurrentOrder()); };
   }, [dispatch, id]);
@@ -49,7 +49,7 @@ export default function OrderDetails() {
   };
 
   const getStatusBadge = (status) => {
-    switch(status?.toLowerCase()) {
+    switch (status?.toLowerCase()) {
       case 'delivered':
       case 'shipped':
       case 'billed': return 'bg-emerald-50/80 text-emerald-700 border-emerald-200/50 shadow-sm';
@@ -90,8 +90,8 @@ export default function OrderDetails() {
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
           <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Order Not Found</h2>
           <p className="text-sm sm:text-base text-gray-500 mt-2 font-medium">{error}</p>
-          <button 
-            onClick={() => navigate('/orders')} 
+          <button
+            onClick={() => navigate('/orders')}
             className="w-full sm:w-auto mt-6 sm:mt-8 px-6 py-2.5 bg-white/50 border border-white/80 rounded-xl shadow-sm text-blue-600 hover:bg-white hover:shadow-md transition-all font-bold"
           >
             Back to Orders
@@ -113,7 +113,7 @@ export default function OrderDetails() {
     const w = Number(item.weight) || Number(item.product?.weight) || 0;
     return acc + (w * item.quantity);
   }, 0);
-  
+
   const totalWeightLbs = Math.floor(totalWeightInOunces / 16);
   const totalWeightOz = +(totalWeightInOunces % 16).toFixed(1);
 
@@ -122,7 +122,7 @@ export default function OrderDetails() {
 
   return (
     <div className="relative max-w-6xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-700 px-4 lg:px-0 pb-12">
-      
+
       {/* Subtle Background Orbs */}
       <div className="absolute top-20 right-0 sm:right-10 w-64 h-64 sm:w-80 sm:h-80 bg-blue-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
       <div className="absolute top-60 left-0 sm:left-10 w-64 h-64 sm:w-80 sm:h-80 bg-indigo-400/10 rounded-full mix-blend-multiply filter blur-3xl -z-10 pointer-events-none"></div>
@@ -130,7 +130,7 @@ export default function OrderDetails() {
       {/* Premium Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 sm:pt-0">
         <div className="flex items-start sm:items-center gap-3 sm:gap-5">
-          <button 
+          <button
             onClick={() => navigate('/orders')}
             className="flex-shrink-0 flex items-center justify-center h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md text-gray-600 hover:text-gray-900 hover:bg-white/60 transition-all shadow-[0_2px_10px_rgba(0,0,0,0.02)] mt-1 sm:mt-0"
           >
@@ -158,10 +158,10 @@ export default function OrderDetails() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-        
+
         {/* Left Column: Info Cards */}
         <div className="flex-1 space-y-6 lg:space-y-8">
-          
+
           {/* Timeline Status Card */}
           <section className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] p-6 sm:p-8">
             <div className="relative">
@@ -173,7 +173,7 @@ export default function OrderDetails() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-0 relative">
                   {/* Progress Line */}
                   <div className="hidden sm:block absolute top-4 left-6 right-6 h-1 bg-gray-200 rounded-full z-0"></div>
-                  <div 
+                  <div
                     className="hidden sm:block absolute top-4 left-6 h-1 bg-blue-600 rounded-full z-0 transition-all duration-1000 ease-out"
                     style={{ width: `${(Math.max(currentStep - 1, 0) / 3) * 100}%` }}
                   ></div>
@@ -186,11 +186,10 @@ export default function OrderDetails() {
                     { step: 4, label: 'Delivered', icon: CheckCircle2 }
                   ].map((s) => (
                     <div key={s.step} className="flex sm:flex-col items-center gap-4 sm:gap-3 relative z-10">
-                      <div className={`flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 transition-all ${
-                        currentStep >= s.step 
-                          ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30' 
+                      <div className={`flex items-center justify-center h-8 w-8 sm:h-10 sm:w-10 rounded-full border-2 transition-all ${currentStep >= s.step
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30'
                           : 'bg-white border-gray-300 text-gray-400'
-                      }`}>
+                        }`}>
                         <s.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
                       <span className={`text-xs sm:text-sm font-bold ${currentStep >= s.step ? 'text-gray-900' : 'text-gray-400'}`}>
@@ -214,7 +213,7 @@ export default function OrderDetails() {
                 <h2 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">Customer & Destination</h2>
               </div>
               <div className="p-5 sm:p-6 flex-1 text-xs sm:text-sm text-gray-700 font-medium leading-relaxed z-10 space-y-4">
-                
+
                 {/* Contact Snippets */}
                 <div className="space-y-2">
                   <span className="block font-extrabold text-gray-900 mb-1 text-sm sm:text-base">{addr?.recipientName}</span>
@@ -246,7 +245,7 @@ export default function OrderDetails() {
 
             {/* Carrier Info & Payment Details */}
             <section className="flex flex-col gap-6 lg:gap-8">
-              
+
               {/* Carrier Panel */}
               <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden flex flex-col relative group">
                 <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-tr from-emerald-400 to-teal-500 opacity-5 blur-2xl group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"></div>
@@ -266,7 +265,7 @@ export default function OrderDetails() {
                   {ship?.trackingNumber && (
                     <div>
                       <p className="text-gray-400 text-[9px] sm:text-[10px] uppercase tracking-widest font-bold mb-1.5">Tracking Link</p>
-                      <a 
+                      <a
                         href={getTrackingUrl(ship.carrierType, ship.trackingNumber)}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -328,7 +327,7 @@ export default function OrderDetails() {
         {/* Right Column: Line Items & Summary */}
         <div className="w-full lg:w-[420px] flex-shrink-0">
           <div className="bg-white/40 backdrop-blur-2xl backdrop-saturate-150 rounded-2xl sm:rounded-3xl border border-white/60 shadow-[0_8px_30px_rgba(0,0,0,0.04)] overflow-hidden lg:sticky lg:top-28">
-            
+
             {/* Dark Premium Header for Receipt */}
             <div className="p-5 sm:p-6 bg-gradient-to-br from-slate-900 to-gray-900 text-white flex items-center justify-between shadow-inner relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl pointer-events-none"></div>
@@ -337,7 +336,7 @@ export default function OrderDetails() {
                 {order.items?.length || 0} Items
               </span>
             </div>
-            
+
             {/* Itemized Breakdown */}
             <div className="max-h-[300px] sm:max-h-[400px] overflow-y-auto p-4 sm:p-6 space-y-3 sm:space-y-4 custom-scrollbar border-b border-white/50 bg-white/20">
               {order.items?.map((item, index) => {
@@ -345,14 +344,14 @@ export default function OrderDetails() {
                 const itemOunces = (Number(item.weight) || Number(item.product?.weight) || 0) * item.quantity;
                 const itemLbs = Math.floor(itemOunces / 16);
                 const itemRemOz = +(itemOunces % 16).toFixed(1);
-                
+
                 return (
                   <div key={index} className="flex gap-3 sm:gap-4 p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/60 border border-white/80 shadow-sm hover:bg-white/80 transition-colors">
                     <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-lg sm:rounded-xl bg-gradient-to-tr from-gray-100 to-white border border-white flex flex-shrink-0 items-center justify-center shadow-inner overflow-hidden">
                       {item.productImage ? (
-                         <img src={item.productImage} alt={item.name} className="h-full w-full object-cover" />
+                        <img src={item.productImage} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
-                         <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
+                        <Package className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
                       )}
                     </div>
                     <div className="flex flex-col flex-1 justify-center min-w-0">
@@ -360,15 +359,15 @@ export default function OrderDetails() {
                         {item.name}
                       </h3>
                       <p className="text-[9px] sm:text-[10px] text-gray-500 font-mono font-bold uppercase tracking-wider mt-0.5">SKU: {item.sku}</p>
-                      
+
                       <div className="flex items-center justify-between mt-1.5 sm:mt-2">
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 bg-white border border-gray-200 shadow-sm px-2 py-0.5 rounded-md">Qty: {item.quantity}</span>
-                          
+
                           {/* Item Weight Badge */}
                           {itemOunces > 0 && (
                             <span className="text-[10px] sm:text-[11px] font-bold text-gray-500 bg-gray-50 border border-gray-200 shadow-sm px-2 py-0.5 rounded-md flex items-center gap-1">
-                              <Weight size={10} /> 
+                              <Weight size={10} />
                               {itemLbs > 0 && <span>{itemLbs} <span className="text-[8px] uppercase">lb</span></span>}
                               {itemRemOz > 0 && <span>{itemRemOz} <span className="text-[8px] uppercase">oz</span></span>}
                             </span>
@@ -388,13 +387,15 @@ export default function OrderDetails() {
 
             {/* Financial Calculations */}
             <div className="p-5 sm:p-6 space-y-3 sm:space-y-4 text-xs sm:text-sm bg-white/40">
-              <div className="flex justify-between items-center text-gray-600 font-medium">
+              {canViewCosts && (
+                <div className="flex justify-between items-center text-gray-600 font-medium">
                 <span>Subtotal</span>
                 <span className="font-bold text-gray-900">
                   {showFinancials ? formatMoney((order.subtotal)) : '---'}
                 </span>
               </div>
-              
+              )}
+
               {/* Total Order Weight */}
               {totalWeightInOunces > 0 && (
                 <div className="flex justify-between items-center text-gray-600 font-medium py-1">
@@ -415,21 +416,25 @@ export default function OrderDetails() {
                 </div>
               )}
 
-              <div className="flex justify-between items-center text-gray-600 font-medium">
-                <span>Shipping Cost</span>
-                <span className="font-bold text-gray-900">
-                  {showFinancials ? formatMoney(ship?.shippingCost || 0) : '---'}
-                </span>
-              </div>
-              
-              <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
-                <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
-                <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
-                  {showFinancials ? formatMoney(order.totalAmount) : '---'}
-                </span>
-              </div>
+              {canViewCosts && (
+                <div className="flex justify-between items-center text-gray-600 font-medium">
+                  <span>Shipping Cost</span>
+                  <span className="font-bold text-gray-900">
+                    {showFinancials ? formatMoney(ship?.shippingCost || 0) : '---'}
+                  </span>
+                </div>
+              )}
+
+              {canViewCosts && (
+                <div className="pt-3 sm:pt-4 mt-1 sm:mt-2 border-t border-gray-200/60 flex justify-between items-end sm:items-center">
+                  <span className="text-sm sm:text-base font-extrabold text-gray-900 tracking-tight">Total Charged</span>
+                  <span className="text-2xl sm:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 drop-shadow-sm leading-none">
+                    {showFinancials ? formatMoney(order.totalAmount) : '---'}
+                  </span>
+                </div>
+              )}
             </div>
-            
+
           </div>
         </div>
 

@@ -205,13 +205,39 @@ export default function Checkout() {
         });
       }
 
+      // --- CUSTOM UPS SORTING LOGIC ---
+      const getUpsPriority = (label) => {
+        const lowerLabel = label.toLowerCase();
+        
+        // If it's not a UPS carrier, assign a high number so it drops to the bottom or stays grouped below
+        if (!lowerLabel.includes('ups')) return 999; 
+        
+        // Specific checks based on requested priority order
+        if (lowerLabel.includes('ground')) return 10;
+        
+        // Crucial: Check "Saver" BEFORE "Next Day Air" so it doesn't accidentally catch the substring
+        if (lowerLabel.includes('next day air saver')) return 30; 
+        if (lowerLabel.includes('next day air')) return 20;
+        
+        // Crucial: Check "AM" BEFORE standard "2nd day air"
+        if (lowerLabel.includes('2nd day air am')) return 50; 
+        if (lowerLabel.includes('2nd day air')) return 40;
+        
+        if (lowerLabel.includes('3 day')) return 60;
+        
+        return 100; // Catch-all for uncategorized UPS services
+      };
+
+      // Execute sort
+      flattenedOptions.sort((a, b) => getUpsPriority(a.label) - getUpsPriority(b.label));
+
       setShippingOptions(flattenedOptions);
 
       if (flattenedOptions.length > 0 && !selectedShippingMethod) {
         setSelectedShippingMethod(flattenedOptions[0].code);
       }
     }
-  }, [carriers, freightProviders, carrierStatus, freightStatus]);
+  }, [carriers, freightProviders, carrierStatus, freightStatus, selectedShippingMethod]);
 
   const handleAddressSelect = (e) => {
     const id = e.target.value;
@@ -544,6 +570,7 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {/* ZIP and State Fields swapped */}
                 <div className="grid grid-cols-2 gap-4 sm:gap-5">
                   <div className="col-span-1">
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">ZIP Code <span className="text-red-500">*</span></label>
@@ -555,6 +582,7 @@ export default function Checkout() {
                   </div>
                 </div>
 
+                {/* Country Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                   <div>
                     <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Country <span className="text-red-500">*</span></label>
